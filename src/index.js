@@ -3,6 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const AdmZip = require('adm-zip');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
 const config = require('./config');
@@ -23,10 +24,12 @@ const wa = new Client({ authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }
 let qrText = '';
 let waReady = false;
 let waInfo = null;
+let waError = '';
 
-wa.on('qr', qr => { qrText = qr; qrcode.generate(qr, { small: true }); });
-wa.on('ready', () => { waReady = true; waInfo = wa.info; qrText = ''; console.log('WhatsApp ready'); });
-wa.on('disconnected', () => { waReady = false; });
+wa.on('qr', qr => { qrText = qr; waError = ''; qrcode.generate(qr, { small: true }); });
+wa.on('ready', () => { waReady = true; waInfo = wa.info; qrText = ''; waError = ''; console.log('WhatsApp ready'); });
+wa.on('auth_failure', m => { waError = 'WhatsApp login failed: ' + m; });
+wa.on('disconnected', reason => { waReady = false; waError = 'WhatsApp disconnected: ' + reason; });
 
 wa.on('message', async msg => {
   try {
@@ -62,10 +65,18 @@ wa.on('message', async msg => {
 // ---------- API ----------
 app.get('/api/status', (req, res) => {
   const s = store.getSettings();
-  res.json({ waReady, waInfo: waInfo ? { pushname: waInfo.pushname, wid: waInfo.wid } : null, qrAvailable: !!qrText, geminiKeySet: !!(s.geminiApiKey || config.geminiApiKey), presets: Object.keys(PRESETS) });
+  res.json({ waReady, waInfo: waInfo ? { pushname: waInfo.pushname, wid: waInfo.wid } : null, qrAvailable: !!qrText, waError, geminiKeySet: !!(s.geminiApiKey || config.geminiApiKey), presets: Object.keys(PRESETS) });
 });
 
-app.get('/api/qr', (req, res) => res.json({ qr: qrText }));
+app.get('/api/qr', async (req, res) => {
+  if (!qrText) return res.json({ qr: '', qrImage: '' });
+  try {
+    const qrImage = await QRCode.toDataURL(qrText, { width: 280, margin: 1 });
+    res.json({ qrImage });
+  } catch (e) {
+    res.json({ qr: '', qrImage: '', error: e.message });
+  }
+});
 
 app.get('/api/chats', async (req, res) => {
   if (!waReady) return res.json({ chats: [] });
@@ -139,5 +150,8 @@ app.get('/api/history/:chatId', (req, res) => {
 const PORT = config.port;
 app.listen(PORT, () => console.log(`WA-Agent on http://localhost:${PORT}`));
 // WhatsApp connection is optional for the web UI: if it fails (no network,
-// etc.), the setup pages still work and will retry on next start.
-wa.initialize().catch(e => console.error('WhatsApp init failed (web UI still running):', e.message));
+// missing Chrome, etc.), the setup pages still work and show the error.
+wa.initialize().catch(e => {
+  waError = e.message;
+  console.error('WhatsApp init failed (web UI still running):', e.message);
+});

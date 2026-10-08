@@ -67,8 +67,14 @@ async function refresh(){
   if(s.waReady){ qb.innerHTML = '<span class="badge on">connected</span>'; }
   else if(s.qrAvailable){
     const q = await fetch('/api/qr').then(r=>r.json());
-    qb.innerHTML = 'Scan this QR in WhatsApp → Linked devices:<br><code style="word-break:break-all">'+q.qr+'</code><br><span class="muted">Tip: use your phone camera on the terminal QR for easiest scanning.</span>';
-  } else qb.textContent = 'Starting… refresh in a few seconds.';
+    qb.innerHTML = q.qrImage
+      ? `<img src="${q.qrImage}" width="280" height="280" style="border-radius:12px;background:#fff;padding:8px" alt="WhatsApp QR code"><br><span class="muted">Scan with WhatsApp → Settings → Linked devices → Link a device</span>`
+      : 'QR loading…';
+  }
+  else if(s.waError){
+    qb.innerHTML = `<span class="badge off">error</span><br><code style="word-break:break-all">${s.waError}</code><br><br><span class="muted">Common fixes:<br>• Missing Chrome: run <code>npx puppeteer browsers install chrome</code> in the project folder, then <code>npm start</code> again.<br>• Stuck session: delete the <code>.wwebjs_auth</code> folder and restart.<br>• First run can take 2–3 minutes while Chrome downloads — check the terminal.</span>`;
+  }
+  else qb.textContent = 'Starting… refresh in a few seconds.';
   if(s.waReady){
     const c = await fetch('/api/chats').then(r=>r.json());
     const presets = s.presets;
