@@ -61,8 +61,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-appl
 .btn.sm{padding:7px 13px;font-size:13px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
-input[type=text],input[type=password],select{width:100%;background:#0c0f13;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:14px}
-input:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=text],input[type=password],select,textarea{width:100%;background:#0c0f13;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:14px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 input[type=file]{color:var(--muted);font-size:13px}
 .hint{font-size:12.5px;color:var(--faint);line-height:1.5}
 a{color:var(--accent)}
@@ -91,6 +91,24 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
 .howto li{counter-increment:how;display:flex;gap:14px;margin:16px 0;align-items:flex-start}
 .howto li::before{content:counter(how);flex:none;width:28px;height:28px;border-radius:50%;background:var(--card2);border:1px solid var(--border);color:var(--accent);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
 .howto b{color:var(--text)} .howto span{color:var(--muted);font-size:14px;line-height:1.55}
+/* Bulk bar + chat items */
+.bulkbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:12px 0}
+.bulkbar select{width:auto;min-width:130px}
+.banner{background:#15202e;border:1px solid #2b4a6e;border-radius:10px;padding:12px 16px;margin:12px 0;font-size:14px;line-height:1.5}
+.banner b{color:#fff}
+.chatitem{border-bottom:1px solid var(--border)}
+.chatitem:last-child{border-bottom:0}
+.chathead{display:flex;gap:12px;align-items:center;padding:13px 6px;cursor:pointer}
+.chathead:hover{background:var(--card2)}
+.chathead input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.chathead .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chathead .tag{font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-left:8px;flex:none}
+.chatedit{display:none;padding:4px 6px 16px 34px}
+.chatitem.open .chatedit{display:block}
+.chatedit .grid2{margin-bottom:10px}
+.stylelib-row{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--border)}
+.stylelib-row:last-child{border:0}
+.stylelib-row .nm{font-weight:600;flex:1}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:14px;display:none;z-index:50}
 </style>
 </head>
@@ -146,8 +164,39 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
             <h2 style="margin:0">Chats</h2>
             <button class="btn ghost sm" id="chats-refresh">Refresh</button>
           </div>
-          <p class="small">Choose a tone and mode per chat. Delay overrides the global reply timing — leave blank to use the global range.</p>
+          <div id="chats-banner" class="banner" style="display:none"></div>
+          <div class="bulkbar">
+            <span class="small muted" id="sel-count">0 selected</span>
+            <button class="btn ghost sm" data-bulk="all">All</button>
+            <button class="btn ghost sm" data-bulk="groups">All groups</button>
+            <button class="btn ghost sm" data-bulk="personal">Personal</button>
+            <button class="btn ghost sm" data-bulk="none">Clear</button>
+            <select id="bulk-style" title="Style to apply"></select>
+            <button class="btn sm" id="bulk-apply-style">Apply style</button>
+            <select id="bulk-mode" title="Mode to apply">
+              <option value="off">off</option><option value="draft">draft</option><option value="auto">auto</option>
+            </select>
+            <button class="btn sm" id="bulk-apply-mode">Apply mode</button>
+          </div>
+          <p class="small muted">Click a chat to set its tone, mode and timing. Tick boxes to apply one style or mode to many chats at once.</p>
           <div id="chat-list"><p class="muted">Loading…</p></div>
+        </div>
+        <div class="card">
+          <h2 style="margin:0 0 4px">My styles</h2>
+          <p class="small muted">Styles you taught from chat exports. Deleting one resets its chats to Friendly.</p>
+          <div id="style-lib"><p class="muted">Loading…</p></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h2 style="margin:0 0 6px">Send a message</h2>
+          <p class="small">Send a one-off message from your own WhatsApp number — handy when the agent can't do it for you. Doesn't change any chat's auto-reply mode.</p>
+          <div class="row" style="gap:8px;align-items:center">
+            <select id="send-chat" style="flex:1;min-width:180px"><option value="">Select a chat…</option></select>
+            <button class="btn ghost sm" id="send-refresh" title="Reload chat list">↻</button>
+          </div>
+          <textarea id="send-text" rows="2" style="width:100%;margin-top:8px;box-sizing:border-box" placeholder="Type your message…"></textarea>
+          <div class="row" style="margin-top:8px;justify-content:flex-end">
+            <button class="btn" id="send-btn">Send via WhatsApp</button>
+          </div>
         </div>
       </section>
 
@@ -174,8 +223,8 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
                 <label class="f">Provider
                   <select id="s-prov"></select>
                 </label>
-                <label class="f">Model <span class="hint">pick a suggestion or type any model id</span>
-                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-2.5-flash-lite">
+                <label class="f">Model <span class="hint">pick a suggestion, load from the provider, or type any model id</span>
+                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-3.5-flash-lite">
                   <datalist id="s-models"></datalist>
                 </label>
               </div>
@@ -190,6 +239,7 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
               <p class="hint" id="s-keyhint"></p>
               <div class="row" style="margin-top:12px">
                 <button class="btn" id="s-save-llm">Save</button>
+                <button class="btn ghost" id="s-load-models">Load models</button>
                 <button class="btn ghost" id="s-test-llm">Test connection</button>
                 <span id="s-llm-status" class="small muted"></span>
               </div>
@@ -217,8 +267,9 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
             <div class="n">4</div>
             <div style="flex:1">
               <h2>Teach it your style</h2>
-              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. For group chats, enter your name/number so only <i>your</i> messages are learned.</p>
+              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. For group chats, enter your name/number so only <i>your</i> messages are learned. Give the style a name — you'll pick which chats use it next.</p>
               <div class="row">
+                <label class="f" style="flex:1;min-width:200px">Name this style<input type="text" id="s-stylename" placeholder="e.g. My casual tone"></label>
                 <label class="f" style="flex:1;min-width:220px">Your names / numbers (comma separated)<input type="text" id="s-ident" placeholder="e.g. Master, +92 300 1234567"></label>
               </div>
               <div class="row" style="margin-top:12px">
@@ -298,38 +349,159 @@ function renderHomeStats(){
 }
 
 /* ---------- chats ---------- */
-let PRESETS = [];
+let STYLES = { presets: [], customs: [] };
+let CHATS = [];
+let PENDING_BANNER = null;
+
+function styleOptions(selected){
+  const pre = STYLES.presets.map(p =>
+    `<option value="preset:${p}" ${selected === 'preset:' + p ? 'selected' : ''}>${p}</option>`).join('');
+  const cus = STYLES.customs.map(s =>
+    `<option value="${s.id}" ${selected === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+  return `<optgroup label="Tones">${pre}</optgroup>` +
+    (cus ? `<optgroup label="My styles">${cus}</optgroup>` : '');
+}
+
+async function loadStyles(){
+  const r = await api('/api/styles');
+  STYLES = { presets: r.presets || [], customs: r.styles || [] };
+  $('bulk-style').innerHTML = styleOptions('preset:friendly');
+  renderStyleLib();
+}
+
+function renderStyleLib(){
+  const box = $('style-lib');
+  if (!STYLES.customs.length) { box.innerHTML = '<p class="muted">None yet — teach one in Setup step 4.</p>'; return; }
+  box.innerHTML = STYLES.customs.map(s => `
+    <div class="stylelib-row">
+      <div class="nm">${esc(s.name)}</div>
+      <span class="small muted">${new Date(s.createdAt).toLocaleDateString()}</span>
+      <button class="btn ghost sm" data-del-style="${s.id}">Delete</button>
+    </div>`).join('');
+  box.querySelectorAll('[data-del-style]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Delete style "${b.closest('.stylelib-row').querySelector('.nm').textContent}"?`)) return;
+    await api('/api/styles/' + encodeURIComponent(b.dataset.delStyle), { method: 'DELETE' });
+    loadChats();
+  });
+}
+
 async function loadChats(){
   const box = $('chat-list');
   try {
-    if (!PRESETS.length) PRESETS = (await api('/api/status')).presets;
+    await loadStyles();
     const { chats } = await api('/api/chats');
+    CHATS = chats || [];
+    populateSendPicker();
     if (!chats.length) { box.innerHTML = '<p class="muted">No chats yet — connect WhatsApp in Setup first.</p>'; return; }
     box.innerHTML = chats.map(c => `
-      <div class="chatrow">
-        <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
-        <select id="m-${c.id}">${['off','draft','auto'].map(m =>
-          `<option value="${m}" ${c.config.mode === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
-        <select id="s-${c.id}">
-          ${PRESETS.map(p => `<option value="${p}" ${c.config.presetKey === p && c.config.styleType !== 'custom' ? 'selected' : ''}>${p}</option>`).join('')}
-          <option value="__custom" ${c.config.styleType === 'custom' ? 'selected' : ''}>custom</option>
-        </select>
-        <input id="d1-${c.id}" placeholder="min s" value="${c.config.replyDelayMin ?? ''}">
-        <input id="d2-${c.id}" placeholder="max s" value="${c.config.replyDelayMax ?? ''}">
-        <button class="btn sm" data-save="${c.id}">Save</button>
+      <div class="chatitem" data-id="${esc(c.id)}" data-group="${c.isGroup ? 1 : 0}">
+        <div class="chathead">
+          <input type="checkbox" data-check="${esc(c.id)}">
+          <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
+          <span class="badge">${esc(c.config.styleName || '')}</span>
+          <span class="badge ${c.config.mode === 'auto' ? 'on' : c.config.mode === 'draft' ? 'warn' : ''}">${c.config.mode}</span>
+        </div>
+        <div class="chatedit">
+          <div class="grid2">
+            <label class="f">Mode
+              <select id="m-${esc(c.id)}">${['off','draft','auto'].map(m =>
+                `<option value="${m}" ${c.config.mode === m ? 'selected' : ''}>${m}${m === 'auto' ? ' — replies itself' : m === 'draft' ? ' — prepares only' : ' — silent'}</option>`).join('')}</select>
+            </label>
+            <label class="f">Style
+              <select id="s-${esc(c.id)}">${styleOptions(c.config.styleId)}</select>
+            </label>
+          </div>
+          <div class="row">
+            <label class="f">Delay min (s)<input type="text" id="d1-${esc(c.id)}" style="width:80px" placeholder="global" value="${c.config.replyDelayMin ?? ''}"></label>
+            <label class="f">Delay max (s)<input type="text" id="d2-${esc(c.id)}" style="width:80px" placeholder="global" value="${c.config.replyDelayMax ?? ''}"></label>
+            <button class="btn sm" data-save="${esc(c.id)}" style="align-self:flex-end">Save</button>
+          </div>
+        </div>
       </div>`).join('');
-    box.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveChat(b.dataset.save));
+    box.querySelectorAll('.chathead').forEach(h => h.addEventListener('click', e => {
+      if (e.target.type === 'checkbox') return;
+      h.parentElement.classList.toggle('open');
+    }));
+    box.querySelectorAll('[data-save]').forEach(b => b.onclick = e => { e.stopPropagation(); saveChat(b.dataset.save); });
+    box.querySelectorAll('[data-check]').forEach(cb => cb.onchange = updateSelCount);
+    if (PENDING_BANNER) {
+      const b = $('chats-banner');
+      b.style.display = 'block';
+      b.innerHTML = PENDING_BANNER;
+      $('bulk-style').value = PENDING_BANNER_STYLE || 'preset:friendly';
+      PENDING_BANNER = null;
+    }
   } catch(e){ box.innerHTML = '<p class="muted">Could not load chats.</p>'; }
 }
+
+let PENDING_BANNER_STYLE = null;
+function updateSelCount(){
+  const n = document.querySelectorAll('[data-check]:checked').length;
+  $('sel-count').textContent = n + ' selected';
+}
+function selectedIds(){
+  return [...document.querySelectorAll('[data-check]:checked')].map(cb => cb.dataset.check);
+}
+document.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => {
+  const how = b.dataset.bulk;
+  document.querySelectorAll('.chatitem').forEach(it => {
+    const cb = it.querySelector('[data-check]');
+    cb.checked = how === 'all' ? true
+      : how === 'groups' ? it.dataset.group === '1'
+      : how === 'personal' ? it.dataset.group !== '1'
+      : false;
+  });
+  updateSelCount();
+});
+$('bulk-apply-style').onclick = async () => {
+  const ids = selectedIds();
+  if (!ids.length) return toast('Tick some chats first');
+  const styleId = $('bulk-style').value;
+  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chatIds: ids, styleId }) });
+  toast(`Style applied to ${r.updated} chats`);
+  loadChats();
+};
+$('bulk-apply-mode').onclick = async () => {
+  const ids = selectedIds();
+  if (!ids.length) return toast('Tick some chats first');
+  const mode = $('bulk-mode').value;
+  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chatIds: ids, mode }) });
+  toast(`Mode set on ${r.updated} chats`);
+  loadChats();
+};
+
 function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 async function saveChat(id){
-  const v = x => $(x + '-' + CSS.escape(id)).value;
+  const v = x => document.getElementById(x + '-' + id).value;
   await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatId:id, mode:v('m'), styleType:v('s') === '__custom' ? 'custom' : 'preset',
-      presetKey:v('s'), replyDelayMin:v('d1'), replyDelayMax:v('d2') }) });
+    body: JSON.stringify({ chatId: id, mode: v('m'), styleId: v('s'),
+      replyDelayMin: v('d1'), replyDelayMax: v('d2') }) });
   toast('Saved');
+  loadChats();
 }
 $('chats-refresh').onclick = loadChats;
+
+/* ---------- one-off outbound message ---------- */
+function populateSendPicker(){
+  const sel = $('send-chat');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select a chat…</option>' + CHATS.map(c =>
+    `<option value="${c.id}">${esc(c.name)}${c.isGroup ? ' (group)' : ''}</option>`).join('');
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+$('send-refresh').onclick = loadChats;
+$('send-btn').onclick = async () => {
+  const chatId = $('send-chat').value, text = $('send-text').value.trim();
+  if (!chatId) return toast('Pick a chat first');
+  if (!text) return toast('Type a message first');
+  const r = await api('/api/send-message', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chatId, text }) });
+  if (r.ok) { toast('Sent'); $('send-text').value = ''; }
+  else toast(r.error || 'Send failed');
+};
 
 /* ---------- setup ---------- */
 let PROVIDERS = {};
@@ -406,6 +578,17 @@ $('s-test-llm').onclick = async () => {
     ? `<span class="badge on">works</span> <span class="muted">${esc(r.provider)} · ${esc(r.model)} replied: “${esc(r.reply)}”</span>`
     : `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
 };
+$('s-load-models').onclick = async () => {
+  $('s-llm-status').textContent = 'Loading models…';
+  const r = await api('/api/llm-models', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ provider: $('s-prov').value, apiKey: $('s-key').value, baseURL: $('s-baseurl').value }) });
+  if (!r.ok) {
+    $('s-llm-status').innerHTML = `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
+    return;
+  }
+  $('s-models').innerHTML = (r.models || []).map(m => `<option value="${esc(m)}">`).join('');
+  $('s-llm-status').innerHTML = `<span class="badge on">done</span> <span class="muted">${r.models.length} models loaded — pick one from the list.</span>`;
+};
 $('s-save-timing').onclick = async () => {
   await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ replyDelayMin: $('s-dmin').value, replyDelayMax: $('s-dmax').value }) });
@@ -416,12 +599,20 @@ $('s-upload').onclick = async () => {
   if (!f) return toast('Choose a chat export file first');
   const fd = new FormData();
   fd.append('file', f);
+  fd.append('name', $('s-stylename').value);
   fd.append('identifiers', $('s-ident').value);
   $('s-upload-result').textContent = 'Analyzing…';
   const r = await fetch('/api/upload-style', { method:'POST', body: fd }).then(r => r.json());
-  $('s-upload-result').innerHTML = r.ok
-    ? `<span class="badge on">done</span> Learned from <b>${r.messageCount}</b> of your messages. Now pick <b>custom</b> for a chat in the Chats tab.`
-    : `<span class="badge off">failed</span> ${esc(r.error || 'unknown error')}`;
+  if (!r.ok) {
+    $('s-upload-result').innerHTML = `<span class="badge off">failed</span> ${esc(r.error || 'unknown error')}`;
+    return;
+  }
+  $('s-upload-result').innerHTML = `<span class="badge on">done</span> Style <b>${esc(r.name)}</b> learned from <b>${r.messageCount}</b> of your messages.`;
+  $('s-file').value = ''; $('s-stylename').value = '';
+  // guided flow: take them to Chats to choose which chats use it
+  PENDING_BANNER_STYLE = r.styleId;
+  PENDING_BANNER = `<b>Style “${esc(r.name)}” is ready.</b> Tick the chats the agent should reply to, then hit <b>Apply style</b> — and set their mode to <b>auto</b>.`;
+  location.hash = '#/chats';
 };
 
 /* ---------- init ---------- */

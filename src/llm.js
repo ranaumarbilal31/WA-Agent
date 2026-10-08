@@ -14,7 +14,7 @@ const PROVIDERS = {
   gemini: {
     label: 'Google Gemini', kind: 'openai',
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    models: ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3-flash'],
+    models: ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'],
     needsKey: true, keyUrl: 'https://aistudio.google.com', keyHint: 'Free key from Google AI Studio',
   },
   openai: {
@@ -111,15 +111,22 @@ async function anthropicChat({ apiKey, model, system, messages }) {
   return text;
 }
 
-function buildSystemPrompt(chatConfig) {
+function buildSystemPrompt(chatConfig, styles) {
+  // Resolve the chat's style: named custom style, preset, or fallback.
+  const styleId = chatConfig.styleId || 'preset:friendly';
   let styleBlock = '';
-  if (chatConfig.styleType === 'custom' && chatConfig.customProfile) {
-    const p = chatConfig.customProfile;
-    styleBlock =
-      `STYLE: custom (learned from the user's own messages).\n${p.instructions}\n` +
-      `Example messages in their style:\n${p.examples.slice(0, 20).map(e => '- ' + e).join('\n')}`;
-  } else {
-    const preset = PRESETS[chatConfig.presetKey] || PRESETS.friendly;
+  if (styleId.startsWith('custom:')) {
+    const st = (styles || []).find(s => s.id === styleId);
+    if (st && st.profile) {
+      const p = st.profile;
+      styleBlock =
+        `STYLE: "${st.name}" (learned from the user's own messages).\n${p.instructions}\n` +
+        `Example messages in their style:\n${p.examples.slice(0, 20).map(e => '- ' + e).join('\n')}`;
+    }
+  }
+  if (!styleBlock) {
+    const presetKey = styleId.startsWith('preset:') ? styleId.slice(7) : 'friendly';
+    const preset = PRESETS[presetKey] || PRESETS.friendly;
     styleBlock = `STYLE: ${preset.label}.\n${preset.instructions}`;
   }
   return (
@@ -128,9 +135,35 @@ function buildSystemPrompt(chatConfig) {
   );
 }
 
+/**
+ * List available models from a provider (used by "Load models" in Setup).
+ * Works with any OpenAI-compatible endpoint and Anthropic.
+ */
+async function listModels({ provider, apiKey, baseURL }) {
+  const meta = PROVIDERS[provider];
+  if (!meta) throw new Error('Unknown provider.');
+  if (meta.kind === 'anthropic') {
+    if (!apiKey) throw new Error('Paste your API key first.');
+    const res = await fetch('https://api.anthropic.com/v1/models', {
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    });
+    if (!res.ok) throw new Error(`Could not list models (${res.status}). Check the key.`);
+    const data = await res.json();
+    return (data.data || []).map(m => m.id);
+  }
+  const url = (baseURL || meta.baseURL || '').replace(/\/$/, '');
+  if (!url) throw new Error('No API endpoint set.');
+  const headers = {};
+  if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
+  const res = await fetch(`${url}/models`, { headers });
+  if (!res.ok) throw new Error(`Could not list models (${res.status}). Check the endpoint/key.`);
+  const data = await res.json();
+  return (data.data || []).map(m => m.id).sort();
+}
+
 async function generateReply(chatConfig, history, incomingText) {
   const c = activeConfig();
-  const system = buildSystemPrompt(chatConfig);
+  const system = buildSystemPrompt(chatConfig, store.getStyles());
   const messages = [...history.slice(-40), { role: 'user', text: incomingText }];
   if (c.meta.kind === 'anthropic') return anthropicChat({ ...c, system, messages });
   return openAIChat({ ...c, system, messages });
@@ -146,4 +179,4 @@ async function testConnection() {
   return { ok: true, reply: text.slice(0, 200), provider: c.meta.label, model: c.model };
 }
 
-module.exports = { PROVIDERS, activeConfig, generateReply, testConnection, buildSystemPrompt };
+module.exports = { PROVIDERS, activeConfig, generateReply, testConnection, buildSystemPrompt, listModels };

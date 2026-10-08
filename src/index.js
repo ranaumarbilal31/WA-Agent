@@ -10,7 +10,7 @@ const config = require('./config');
 const store = require('./store');
 const { parseChat } = require('./style/parser');
 const { analyze } = require('./style/analyzer');
-const { generateReply, testConnection, activeConfig, PROVIDERS } = require('./llm');
+const { generateReply, testConnection, activeConfig, PROVIDERS, listModels } = require('./llm');
 const { PRESETS } = require('./style/presets');
 
 const app = express();
@@ -114,22 +114,69 @@ app.get('/api/qr', async (req, res) => {
 app.get('/api/chats', async (req, res) => {
   if (!waReady) return res.json({ chats: [] });
   const chats = await wa.getChats();
+  const customs = Object.fromEntries(store.getStyles().map(s => [s.id, s.name]));
   res.json({
-    chats: chats.slice(0, 50).map(c => ({
-      id: c.id._serialized, name: c.name || c.id.user, isGroup: c.isGroup,
-      config: store.getChatConfig(c.id._serialized),
-    })),
+    chats: chats.slice(0, 100).map(c => {
+      const cfg = store.getChatConfig(c.id._serialized);
+      const styleName = cfg.styleId.startsWith('custom:')
+        ? (customs[cfg.styleId] || 'custom')
+        : (PRESETS[cfg.styleId.slice(7)]?.label || cfg.styleId);
+      return {
+        id: c.id._serialized, name: c.name || c.id.user, isGroup: c.isGroup,
+        config: { ...cfg, styleName },
+      };
+    }),
   });
 });
 
 app.post('/api/chat-config', (req, res) => {
-  const { chatId, mode, styleType, presetKey, replyDelayMin, replyDelayMax } = req.body;
+  const { chatId, chatIds, mode, styleId, replyDelayMin, replyDelayMax } = req.body;
+  const ids = chatIds && chatIds.length ? chatIds : (chatId ? [chatId] : []);
+  if (!ids.length) return res.status(400).json({ error: 'chatId(s) required' });
+  const patch = {};
+  if (mode !== undefined) patch.mode = mode;
+  if (styleId !== undefined) patch.styleId = styleId;
+  if (replyDelayMin !== undefined) patch.replyDelayMin = replyDelayMin === '' || replyDelayMin === null ? null : Number(replyDelayMin);
+  if (replyDelayMax !== undefined) patch.replyDelayMax = replyDelayMax === '' || replyDelayMax === null ? null : Number(replyDelayMax);
+  store.setChatConfigBulk(ids, patch);
+  res.json({ ok: true, updated: ids.length });
+});
+
+// ---------- Named styles ----------
+app.get('/api/styles', (req, res) => {
+  res.json({ styles: store.getStyles(), presets: Object.keys(PRESETS) });
+});
+
+app.delete('/api/styles/:id', (req, res) => {
+  res.json({ ok: store.deleteStyle(req.params.id) });
+});
+
+// ---------- LLM ----------
+app.post('/api/llm-models', async (req, res) => {
+  try {
+    const { provider, apiKey, baseURL } = req.body;
+    const models = await listModels({ provider, apiKey: (apiKey || '').trim(), baseURL: (baseURL || '').trim() });
+    res.json({ ok: true, models });
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
+});
+
+// One-off outbound message from the user's own WhatsApp number.
+// (The auto-reply modes only react to incoming messages; this sends on demand.)
+app.post('/api/send-message', async (req, res) => {
+  const { chatId, text } = req.body || {};
+  if (!waReady) return res.status(400).json({ error: 'WhatsApp is not connected yet — pair it in Setup first.' });
   if (!chatId) return res.status(400).json({ error: 'chatId required' });
-  const patch = { mode, styleType, presetKey };
-  if (replyDelayMin !== undefined) patch.replyDelayMin = replyDelayMin === '' ? null : Number(replyDelayMin);
-  if (replyDelayMax !== undefined) patch.replyDelayMax = replyDelayMax === '' ? null : Number(replyDelayMax);
-  store.setChatConfig(chatId, patch);
-  res.json({ ok: true });
+  const msg = (text || '').trim();
+  if (!msg) return res.status(400).json({ error: 'Message text is empty' });
+  if (msg.length > 4000) return res.status(400).json({ error: 'Message too long (max 4000 characters)' });
+  try {
+    await wa.sendMessage(chatId, msg);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- Settings: BYOK (any LLM) + reply delay range ----------
@@ -153,13 +200,15 @@ app.post('/api/settings', (req, res) => {
   res.json({ ok: true, settings: { ...saved, llmApiKey: maskKey(saved.llmApiKey) } });
 });
 
-// Upload exported chat -> analyze -> save as custom profile for a chat (or global)
+// Upload exported chat -> analyze -> save as a NAMED style in the library.
+// The UI then guides the user to the Chats tab to pick which chats use it.
 app.post('/api/upload-style', upload.single('file'), (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'file required' });
+    const name = (req.body.name || '').trim().slice(0, 60) || 'My style';
     let text;
-    const name = req.file.originalname.toLowerCase();
-    if (name.endsWith('.zip')) {
+    const fname = req.file.originalname.toLowerCase();
+    if (fname.endsWith('.zip')) {
       const zip = new AdmZip(req.file.buffer);
       const entry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.txt'));
       if (!entry) return res.status(400).json({ error: 'no .txt found in zip' });
@@ -173,9 +222,9 @@ app.post('/api/upload-style', upload.single('file'), (req, res) => {
       .split(',').map(s => s.trim()).filter(Boolean)
       .concat(config.myIdentifiers);
     const profile = analyze(messages, identifiers);
-    const { chatId } = req.body;
-    if (chatId) store.setChatConfig(chatId, { styleType: 'custom', customProfile: profile });
-    res.json({ ok: true, profile: { ...profile, examples: profile.examples.slice(0, 10) }, messageCount: profile.messageCount });
+    if (!profile.messageCount) return res.status(400).json({ error: 'found no messages from you — check the name/number you entered' });
+    const style = store.saveStyle(name, profile);
+    res.json({ ok: true, styleId: style.id, name: style.name, messageCount: profile.messageCount });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

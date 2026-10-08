@@ -14,10 +14,15 @@ WhatsApp agent that replies in **your style**. Near-zero cost.
 2. `npm start`
 3. Open http://localhost:3000 — finish the 5-step Setup:
    1. Scan the WhatsApp QR (one-time)
-   2. Pick your AI provider, paste your key, hit **Test connection**
+   2. Pick your AI provider, paste your key, **Load models** to see what's available, hit **Test connection**
    3. Set reply timing (random delay range)
-   4. Export a WhatsApp chat (**Without media**) and upload it to teach your style
-   5. Assign styles per chat in the Chats tab
+   4. Export a WhatsApp chat (**Without media**), **name the style**, upload it — you'll be taken to Chats to choose which chats use it
+   5. Assign styles per chat in the Chats tab (bulk: all / groups / personal)
+
+## Styles
+
+- **Tones (built-in):** Professional, Business, Manager, Customer Support, Sales, Formal, Friendly, Slang, Short & Crisp
+- **My styles:** upload any chat export, name it, and apply it to any chats. The analyzer learns only *your* messages, even in group chats.
 
 No paid key needed — free tiers (Gemini AI Studio, OpenRouter free models) and local models (Ollama) work.
 
