@@ -138,4 +138,6 @@ app.get('/api/history/:chatId', (req, res) => {
 
 const PORT = config.port;
 app.listen(PORT, () => console.log(`WA-Agent on http://localhost:${PORT}`));
-wa.initialize();
+// WhatsApp connection is optional for the web UI: if it fails (no network,
+// etc.), the setup pages still work and will retry on next start.
+wa.initialize().catch(e => console.error('WhatsApp init failed (web UI still running):', e.message));
