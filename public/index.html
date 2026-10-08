@@ -109,6 +109,13 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
 .stylelib-row{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--border)}
 .stylelib-row:last-child{border:0}
 .stylelib-row .nm{font-weight:600;flex:1}
+/* Model picker list */
+.modellist{max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:10px;margin-top:10px;background:#0c0f13}
+.modellist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--border);color:var(--text);padding:9px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.modellist button:hover{background:var(--card2)}
+.modellist button:last-child{border-bottom:0}
+.modellist button.picked{background:#15202e;color:#fff}
+.tone-chip{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:16px;padding:3px 11px;background:var(--card2)}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:14px;display:none;z-index:50}
 </style>
 </head>
@@ -228,6 +235,7 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
                   <datalist id="s-models"></datalist>
                 </label>
               </div>
+              <div id="s-model-list" class="modellist" style="display:none"></div>
               <div class="grid2" style="margin-top:12px">
                 <label class="f" id="s-key-wrap">API key
                   <input type="password" id="s-key" placeholder="Paste your key" autocomplete="off">
@@ -267,10 +275,13 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
             <div class="n">4</div>
             <div style="flex:1">
               <h2>Teach it your style</h2>
-              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. For group chats, enter your name/number so only <i>your</i> messages are learned. Give the style a name — you'll pick which chats use it next.</p>
+              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. Only <i>your</i> messages are learned (auto-detected as the most frequent sender, even in group chats). Give the style a name — you'll pick which chats use it next.</p>
               <div class="row">
                 <label class="f" style="flex:1;min-width:200px">Name this style<input type="text" id="s-stylename" placeholder="e.g. My casual tone"></label>
-                <label class="f" style="flex:1;min-width:220px">Your names / numbers (comma separated)<input type="text" id="s-ident" placeholder="e.g. Master, +92 300 1234567"></label>
+              </div>
+              <div class="row" style="margin-top:10px;align-items:center">
+                <span class="small muted">Built-in tones:</span>
+                <span id="s-tones" class="row" style="gap:6px"></span>
               </div>
               <div class="row" style="margin-top:12px">
                 <input type="file" id="s-file" accept=".txt,.zip">
@@ -316,7 +327,7 @@ function route(){
   document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.route === name));
   $('page-title').textContent = TITLES[name];
   if (name === 'chats') loadChats();
-  if (name === 'setup') { loadProviders(); loadSetupState(); }
+  if (name === 'setup') { loadProviders(); loadSetupState(); renderTones(); }
 }
 window.addEventListener('hashchange', route);
 document.querySelectorAll('.nav button').forEach(b => b.onclick = () => location.hash = '#/' + b.dataset.route);
@@ -587,8 +598,29 @@ $('s-load-models').onclick = async () => {
     return;
   }
   $('s-models').innerHTML = (r.models || []).map(m => `<option value="${esc(m)}">`).join('');
-  $('s-llm-status').innerHTML = `<span class="badge on">done</span> <span class="muted">${r.models.length} models loaded — pick one from the list.</span>`;
+  const box = $('s-model-list');
+  box.style.display = 'block';
+  const models = (r.models || []).map(m => m.replace(/^models\//, ''));
+  const cur = $('s-model').value.trim();
+  box.innerHTML = models.map(m =>
+    `<button type="button" data-model="${esc(m)}" class="${m === cur ? 'picked' : ''}">${esc(m)}</button>`).join('')
+    || '<p class="muted" style="padding:10px">No models returned.</p>';
+  box.querySelectorAll('[data-model]').forEach(b => b.onclick = () => {
+    $('s-model').value = b.dataset.model;
+    box.querySelectorAll('[data-model]').forEach(x => x.classList.remove('picked'));
+    b.classList.add('picked');
+    toast('Model selected: ' + b.dataset.model);
+  });
+  $('s-llm-status').innerHTML = `<span class="badge on">done</span> <span class="muted">${models.length} models — click one to use it.</span>`;
 };
+async function renderTones(){
+  try {
+    const r = await api('/api/styles');
+    const labels = r.presetLabels || {};
+    $('s-tones').innerHTML = (r.presets || []).map(k =>
+      `<span class="tone-chip">${esc(labels[k] || k)}</span>`).join('');
+  } catch(e) { /* ignore */ }
+}
 $('s-save-timing').onclick = async () => {
   await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ replyDelayMin: $('s-dmin').value, replyDelayMax: $('s-dmax').value }) });
@@ -600,7 +632,6 @@ $('s-upload').onclick = async () => {
   const fd = new FormData();
   fd.append('file', f);
   fd.append('name', $('s-stylename').value);
-  fd.append('identifiers', $('s-ident').value);
   $('s-upload-result').textContent = 'Analyzing…';
   const r = await fetch('/api/upload-style', { method:'POST', body: fd }).then(r => r.json());
   if (!r.ok) {

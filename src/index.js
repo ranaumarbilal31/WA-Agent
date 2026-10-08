@@ -144,7 +144,9 @@ app.post('/api/chat-config', (req, res) => {
 
 // ---------- Named styles ----------
 app.get('/api/styles', (req, res) => {
-  res.json({ styles: store.getStyles(), presets: Object.keys(PRESETS) });
+  const labels = {};
+  for (const [k, p] of Object.entries(PRESETS)) labels[k] = p.label;
+  res.json({ styles: store.getStyles(), presets: Object.keys(PRESETS), presetLabels: labels });
 });
 
 app.delete('/api/styles/:id', (req, res) => {

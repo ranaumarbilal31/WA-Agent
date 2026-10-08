@@ -158,7 +158,7 @@ async function listModels({ provider, apiKey, baseURL }) {
   const res = await fetch(`${url}/models`, { headers });
   if (!res.ok) throw new Error(`Could not list models (${res.status}). Check the endpoint/key.`);
   const data = await res.json();
-  return (data.data || []).map(m => m.id).sort();
+  return (data.data || []).map(m => String(m.id).replace(/^models\//, '')).sort();
 }
 
 async function generateReply(chatConfig, history, incomingText) {
