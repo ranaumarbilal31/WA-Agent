@@ -20,7 +20,15 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ---------- WhatsApp client ----------
-const wa = new Client({ authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }), puppeteer: { args: ['--no-sandbox'] } });
+// Uses system Chrome if found (no 150MB download); set CHROME_PATH in .env to override.
+if (config.chromePath) console.log('Using system Chrome:', config.chromePath);
+const wa = new Client({
+  authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }),
+  puppeteer: {
+    args: ['--no-sandbox'],
+    ...(config.chromePath ? { executablePath: config.chromePath } : {}),
+  },
+});
 let qrText = '';
 let waReady = false;
 let waInfo = null;
