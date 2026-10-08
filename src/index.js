@@ -10,7 +10,7 @@ const config = require('./config');
 const store = require('./store');
 const { parseChat } = require('./style/parser');
 const { analyze } = require('./style/analyzer');
-const { generateReply } = require('./gemini');
+const { generateReply, testConnection, activeConfig, PROVIDERS } = require('./llm');
 const { PRESETS } = require('./style/presets');
 
 const app = express();
@@ -20,13 +20,13 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
 // ---------- WhatsApp client ----------
-// Uses system Chrome if found (no 150MB download); set CHROME_PATH in .env to override.
-if (config.chromePath) console.log('Using system Chrome:', config.chromePath);
+// Uses your own browser if found (no 150MB download); set CHROME_PATH in .env to override.
+if (config.browser) console.log(`Using system browser: ${config.browser.name} (${config.browser.path})`);
 const wa = new Client({
   authStrategy: new LocalAuth({ dataPath: '.wwebjs_auth' }),
   puppeteer: {
     args: ['--no-sandbox'],
-    ...(config.chromePath ? { executablePath: config.chromePath } : {}),
+    ...(config.browser ? { executablePath: config.browser.path } : {}),
   },
 });
 let qrText = '';
@@ -73,7 +73,32 @@ wa.on('message', async msg => {
 // ---------- API ----------
 app.get('/api/status', (req, res) => {
   const s = store.getSettings();
-  res.json({ waReady, waInfo: waInfo ? { pushname: waInfo.pushname, wid: waInfo.wid } : null, qrAvailable: !!qrText, waError, geminiKeySet: !!(s.geminiApiKey || config.geminiApiKey), presets: Object.keys(PRESETS) });
+  const llm = activeConfig();
+  res.json({
+    waReady, waInfo: waInfo ? { pushname: waInfo.pushname, wid: waInfo.wid } : null,
+    qrAvailable: !!qrText, waError,
+    llmReady: !!(llm.apiKey || !llm.meta.needsKey) && !!llm.model,
+    llmLabel: llm.meta.label, llmModel: llm.model,
+    browser: config.browser,
+    presets: Object.keys(PRESETS),
+  });
+});
+
+// Public LLM provider metadata for the Setup UI (no secrets).
+app.get('/api/providers', (req, res) => {
+  const out = {};
+  for (const [k, p] of Object.entries(PROVIDERS)) {
+    out[k] = { label: p.label, kind: p.kind, baseURL: p.baseURL, models: p.models, needsKey: p.needsKey, keyUrl: p.keyUrl, keyHint: p.keyHint };
+  }
+  res.json(out);
+});
+
+app.post('/api/llm-test', async (req, res) => {
+  try {
+    res.json(await testConnection());
+  } catch (e) {
+    res.status(400).json({ ok: false, error: e.message });
+  }
 });
 
 app.get('/api/qr', async (req, res) => {
@@ -107,20 +132,25 @@ app.post('/api/chat-config', (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- Settings: BYOK + reply delay range ----------
+// ---------- Settings: BYOK (any LLM) + reply delay range ----------
+function maskKey(k) { return k ? '••••••' + k.slice(-4) : ''; }
+
 app.get('/api/settings', (req, res) => {
   const s = store.getSettings();
-  res.json({ ...s, geminiApiKey: s.geminiApiKey ? '••••••' + s.geminiApiKey.slice(-4) : '' });
+  res.json({ ...s, llmApiKey: maskKey(s.llmApiKey) });
 });
 
 app.post('/api/settings', (req, res) => {
-  const { geminiApiKey, geminiModel, replyDelayMin, replyDelayMax } = req.body;
+  const { llmProvider, llmApiKey, llmBaseURL, llmModel, replyDelayMin, replyDelayMax } = req.body;
   const patch = {};
-  if (geminiApiKey !== undefined) patch.geminiApiKey = geminiApiKey.trim(); // empty clears it
-  if (geminiModel !== undefined) patch.geminiModel = geminiModel.trim();
+  if (llmProvider !== undefined && PROVIDERS[llmProvider]) patch.llmProvider = llmProvider;
+  if (llmApiKey !== undefined) patch.llmApiKey = llmApiKey.trim(); // empty clears it
+  if (llmBaseURL !== undefined) patch.llmBaseURL = llmBaseURL.trim();
+  if (llmModel !== undefined) patch.llmModel = llmModel.trim();
   if (replyDelayMin !== undefined) patch.replyDelayMin = Math.max(0, Number(replyDelayMin) || 0);
   if (replyDelayMax !== undefined) patch.replyDelayMax = Math.max(patch.replyDelayMin ?? store.getSettings().replyDelayMin, Number(replyDelayMax) || 0);
-  res.json({ ok: true, settings: store.setSettings(patch) });
+  const saved = store.setSettings(patch);
+  res.json({ ok: true, settings: { ...saved, llmApiKey: maskKey(saved.llmApiKey) } });
 });
 
 // Upload exported chat -> analyze -> save as custom profile for a chat (or global)

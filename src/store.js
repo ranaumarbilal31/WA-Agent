@@ -45,15 +45,22 @@ function getHistory(chatId) {
 
 // ---------- Settings (BYOK + reply delay) ----------
 const DEFAULT_SETTINGS = {
-  geminiApiKey: '',          // BYOK: user's own key, overrides env
-  geminiModel: '',           // override, else config default
+  llmProvider: 'gemini',     // gemini | openai | anthropic | xai | openrouter | ollama | lmstudio | custom
+  llmApiKey: '',             // BYOK: user's own key, overrides env
+  llmBaseURL: '',            // override endpoint (custom provider / local)
+  llmModel: '',              // override model (empty = provider default)
   replyDelayMin: 8,          // seconds
   replyDelayMax: 25,         // seconds
 };
 
 function getSettings() {
   const db = load();
-  return { ...DEFAULT_SETTINGS, ...(db.settings || {}) };
+  const raw = db.settings || {};
+  const s = { ...DEFAULT_SETTINGS, ...raw };
+  // migrate old gemini-only settings
+  if (!s.llmApiKey && raw.geminiApiKey) { s.llmProvider = 'gemini'; s.llmApiKey = raw.geminiApiKey; }
+  if (!s.llmModel && raw.geminiModel) s.llmModel = raw.geminiModel;
+  return s;
 }
 
 function setSettings(patch) {

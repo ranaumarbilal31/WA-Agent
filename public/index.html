@@ -1,52 +1,433 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WA-Agent — Home</title>
-<link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WA-Agent</title>
+<style>
+:root{
+  --bg:#0a0c0f; --side:#0f1216; --card:#14181e; --card2:#181d24;
+  --border:#22282f; --text:#e9ebee; --muted:#9aa1ab; --faint:#6b7280;
+  --accent:#4c8dff; --accent-d:#3a6fd0; --green:#2f9e5f; --red:#c04545;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
+.app{display:flex;min-height:100vh}
+/* Sidebar */
+.sidebar{width:230px;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#4c8dff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+.brand .name{font-weight:700;font-size:16px}
+.brand .sub{font-size:11px;color:var(--faint)}
+.nav{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.nav button{display:flex;align-items:center;gap:12px;background:none;border:0;color:var(--muted);padding:10px 12px;border-radius:10px;font-size:14px;cursor:pointer;text-align:left;width:100%}
+.nav button svg{width:18px;height:18px;flex:none}
+.nav button:hover{background:var(--card2);color:var(--text)}
+.nav button.active{background:var(--card2);color:var(--text)}
+.side-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+.dot.on{background:var(--green)} .dot.off{background:var(--red)} .dot.warn{background:#d9a13b}
+/* Main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;padding:18px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,12,15,.92);backdrop-filter:blur(6px);z-index:5}
+.topbar h1{font-size:19px;margin:0;font-weight:650}
+.topbar .spacer{flex:1}
+.content{padding:26px 28px;max-width:980px;width:100%;margin:0 auto}
+.view{display:none}.view.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin:0 0 18px}
+.card h2{margin:0 0 6px;font-size:17px;font-weight:650}
+.card h3{margin:0 0 6px;font-size:15px;font-weight:650}
+.card p{margin:8px 0;color:var(--muted);line-height:1.55}
+.muted{color:var(--muted)} .small{font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+@media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}.sidebar{width:64px}.sidebar .lbl,.brand .txt{display:none}}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.stat .k{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.stat .v{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+/* Controls */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:600;background:var(--card2);border:1px solid var(--border);color:var(--muted)}
+.badge.on{color:#7bd99a;border-color:#245c3a;background:#12261a}
+.badge.off{color:#f08686;border-color:#5c2424;background:#261212}
+.badge.warn{color:#e8c37a;border-color:#5c4a24;background:#26200f}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--accent-d)}
+.btn.ghost{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--text)}
+.btn.sm{padding:7px 13px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
+input[type=text],input[type=password],select{width:100%;background:#0c0f13;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:14px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=file]{color:var(--muted);font-size:13px}
+.hint{font-size:12.5px;color:var(--faint);line-height:1.5}
+a{color:var(--accent)}
+code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:12.5px;color:#c9d1d9;word-break:break-all}
+/* Steps */
+.step{display:flex;gap:16px}
+.step .n{flex:none;width:32px;height:32px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--accent)}
+.step.done .n{background:var(--accent);color:#fff;border-color:var(--accent)}
+/* Chat rows */
+.chatrow{display:flex;gap:12px;align-items:center;padding:14px 6px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.chatrow:last-child{border-bottom:0}
+.chatrow .nm{font-weight:600;min-width:170px;flex:1}
+.chatrow .tag{font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-left:8px}
+.chatrow select,.chatrow input{width:auto}
+.chatrow select{min-width:110px}
+.chatrow input{width:64px}
+/* QR */
+.qrwrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.qrwrap img{border-radius:12px;background:#fff;padding:10px}
+.err{background:#261212;border:1px solid #5c2424;border-radius:10px;padding:12px 14px;font-size:13px;color:#f0a8a8;margin-top:10px}
+/* Hero */
+.hero{background:linear-gradient(135deg,#141a26,#191423);border:1px solid var(--border);border-radius:18px;padding:34px;margin-bottom:18px}
+.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:-.02em}
+.hero p{color:var(--muted);max-width:560px;line-height:1.6;margin:0 0 20px}
+.howto{counter-reset:how;list-style:none;padding:0;margin:0}
+.howto li{counter-increment:how;display:flex;gap:14px;margin:16px 0;align-items:flex-start}
+.howto li::before{content:counter(how);flex:none;width:28px;height:28px;border-radius:50%;background:var(--card2);border:1px solid var(--border);color:var(--accent);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.howto b{color:var(--text)} .howto span{color:var(--muted);font-size:14px;line-height:1.55}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:14px;display:none;z-index:50}
+</style>
 </head>
 <body>
-<div class="wrap">
-  <h1>WA-Agent</h1>
-  <p class="muted">WhatsApp agent that replies in your style. Gemini-powered, near-zero cost.</p>
-  <div class="row">
-    <a class="btn" href="setup.html">Open Setup</a>
-  </div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">WA</div>
+      <div class="txt"><div class="name">WA-Agent</div><div class="sub">reply in your style</div></div>
+    </div>
+    <nav class="nav">
+      <button data-route="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg><span class="lbl">Home</span></button>
+      <button data-route="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg><span class="lbl">Chats</span></button>
+      <button data-route="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg><span class="lbl">Setup</span></button>
+    </nav>
+    <div class="side-foot"><span class="dot" id="side-dot"></span><span id="side-text" class="lbl">connecting…</span></div>
+  </aside>
 
-  <div class="card">
-    <h3>Status</h3>
-    <div id="status" class="muted">Loading…</div>
-  </div>
+  <div class="main">
+    <div class="topbar">
+      <h1 id="page-title">Home</h1>
+      <div class="spacer"></div>
+      <span id="top-badges" class="row"></span>
+    </div>
+    <div class="content">
 
-  <div class="card">
-    <h3>Chats</h3>
-    <div id="chats" class="muted">Connect WhatsApp in Setup to see chats.</div>
-  </div>
+      <!-- HOME -->
+      <section class="view" id="view-home">
+        <div class="hero">
+          <h1>Your WhatsApp, in your words.</h1>
+          <p>WA-Agent learns how you text from your exported chats and replies for you — per chat, in the right tone, with human-like timing. Bring any AI key, run it for next to nothing.</p>
+          <div class="row">
+            <a class="btn" href="#/setup">Open setup</a>
+            <a class="btn ghost" href="#/chats">Manage chats</a>
+          </div>
+        </div>
+        <div class="grid3" id="home-stats"></div>
+        <div class="card">
+          <h2>How it works</h2>
+          <ol class="howto">
+            <li><div><b>Connect WhatsApp</b><br><span>Scan a QR once in Setup — the session is remembered.</span></div></li>
+            <li><div><b>Bring your AI key</b><br><span>Gemini, Claude, OpenAI, Grok, OpenRouter or a local model — free tiers work fine.</span></div></li>
+            <li><div><b>Teach it your style</b><br><span>Export any chat and upload it. The analyzer learns <i>your</i> messages only, even in group chats.</span></div></li>
+            <li><div><b>Set it per chat</b><br><span>Professional for the work group, slang for friends. Auto-reply, draft-only, or off.</span></div></li>
+          </ol>
+        </div>
+      </section>
 
-  <div class="card">
-    <h3>How it works</h3>
-    <ol class="steps">
-      <li>Export any WhatsApp chat (without media) and upload it — the analyzer learns <em>your</em> messages only, even in group chats.</li>
-      <li>Pick a preset (Professional, Business, Friendly, Slang, Short) or use your Custom style per chat.</li>
-      <li>Set mode per chat: <b>Auto</b> replies, <b>Draft</b> prepares, <b>Off</b> stays silent.</li>
-    </ol>
+      <!-- CHATS -->
+      <section class="view" id="view-chats">
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <h2 style="margin:0">Chats</h2>
+            <button class="btn ghost sm" id="chats-refresh">Refresh</button>
+          </div>
+          <p class="small">Choose a tone and mode per chat. Delay overrides the global reply timing — leave blank to use the global range.</p>
+          <div id="chat-list"><p class="muted">Loading…</p></div>
+        </div>
+      </section>
+
+      <!-- SETUP -->
+      <section class="view" id="view-setup">
+        <div class="card">
+          <div class="step" id="step-wa">
+            <div class="n">1</div>
+            <div style="flex:1">
+              <h2>Connect WhatsApp</h2>
+              <p>Link this server as a device. You only do this once — the session is saved.</p>
+              <div id="s-qr"><p class="muted">Starting…</p></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="step" id="step-llm">
+            <div class="n">2</div>
+            <div style="flex:1">
+              <h2>Connect your AI</h2>
+              <p>Bring your own key — any provider. Free tiers and local models work, nothing is paid for you.</p>
+              <div class="grid2">
+                <label class="f">Provider
+                  <select id="s-prov"></select>
+                </label>
+                <label class="f">Model <span class="hint">pick a suggestion or type any model id</span>
+                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-2.5-flash-lite">
+                  <datalist id="s-models"></datalist>
+                </label>
+              </div>
+              <div class="grid2" style="margin-top:12px">
+                <label class="f" id="s-key-wrap">API key
+                  <input type="password" id="s-key" placeholder="Paste your key" autocomplete="off">
+                </label>
+                <label class="f" id="s-url-wrap" style="display:none">API endpoint
+                  <input type="text" id="s-baseurl" placeholder="https://…/v1">
+                </label>
+              </div>
+              <p class="hint" id="s-keyhint"></p>
+              <div class="row" style="margin-top:12px">
+                <button class="btn" id="s-save-llm">Save</button>
+                <button class="btn ghost" id="s-test-llm">Test connection</button>
+                <span id="s-llm-status" class="small muted"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="step">
+            <div class="n">3</div>
+            <div style="flex:1">
+              <h2>Reply timing</h2>
+              <p>Each reply waits a <i>random</i> time inside this range and shows “typing…”, so nothing looks bot-timed.</p>
+              <div class="row">
+                <label class="f">Min (seconds)<input type="text" id="s-dmin" style="width:90px"></label>
+                <label class="f">Max (seconds)<input type="text" id="s-dmax" style="width:90px"></label>
+                <button class="btn" id="s-save-timing" style="align-self:flex-end">Save timing</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="step">
+            <div class="n">4</div>
+            <div style="flex:1">
+              <h2>Teach it your style</h2>
+              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. For group chats, enter your name/number so only <i>your</i> messages are learned.</p>
+              <div class="row">
+                <label class="f" style="flex:1;min-width:220px">Your names / numbers (comma separated)<input type="text" id="s-ident" placeholder="e.g. Master, +92 300 1234567"></label>
+              </div>
+              <div class="row" style="margin-top:12px">
+                <input type="file" id="s-file" accept=".txt,.zip">
+                <button class="btn" id="s-upload">Analyze &amp; save</button>
+              </div>
+              <p class="small" id="s-upload-result"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="step">
+            <div class="n">5</div>
+            <div style="flex:1">
+              <h2>Assign styles per chat</h2>
+              <p>Head to <a href="#/chats">Chats</a> — pick a tone per conversation and switch modes between Auto, Draft and Off.</p>
+              <a class="btn ghost" href="#/chats">Go to Chats</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 <script>
-async function load(){
-  const s = await fetch('/api/status').then(r=>r.json());
-  document.getElementById('status').innerHTML =
-    `WhatsApp: <span class="badge ${s.waReady?'on':'off'}">${s.waReady?'connected':'not connected'}</span> ` +
-    `Gemini key: <span class="badge ${s.geminiKeySet?'on':'off'}">${s.geminiKeySet?'set':'missing'}</span>`;
-  if(s.waReady){
-    const c = await fetch('/api/chats').then(r=>r.json());
-    document.getElementById('chats').innerHTML = c.chats.length
-      ? '<table><tr><th>Chat</th><th>Mode</th><th>Style</th></tr>' + c.chats.map(x=>
-        `<tr><td>${x.name}${x.isGroup?' (group)':''}</td><td>${x.config.mode}</td><td>${x.config.styleType==='custom'?'custom':x.config.presetKey}</td></tr>`).join('') + '</table>'
-      : 'No chats found.';
+const $ = id => document.getElementById(id);
+const api = (p, o) => fetch(p, o).then(r => r.json());
+
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600);
+}
+
+/* ---------- routing ---------- */
+const TITLES = { home:'Home', chats:'Chats', setup:'Setup' };
+function route(){
+  const r = (location.hash || '#/home').replace('#/','') || 'home';
+  const name = TITLES[r] ? r : 'home';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.route === name));
+  $('page-title').textContent = TITLES[name];
+  if (name === 'chats') loadChats();
+  if (name === 'setup') { loadProviders(); loadSetupState(); }
+}
+window.addEventListener('hashchange', route);
+document.querySelectorAll('.nav button').forEach(b => b.onclick = () => location.hash = '#/' + b.dataset.route);
+
+/* ---------- status ---------- */
+let STATUS = null;
+async function refreshStatus(){
+  try {
+    STATUS = await api('/api/status');
+    const dot = $('side-dot'), txt = $('side-text');
+    if (STATUS.waReady) { dot.className = 'dot on'; txt.textContent = 'WhatsApp connected'; }
+    else if (STATUS.waError) { dot.className = 'dot off'; txt.textContent = 'WhatsApp error'; }
+    else { dot.className = 'dot warn'; txt.textContent = 'WhatsApp starting…'; }
+    $('top-badges').innerHTML =
+      `<span class="badge ${STATUS.waReady ? 'on' : 'off'}">WhatsApp ${STATUS.waReady ? 'on' : 'off'}</span>` +
+      `<span class="badge ${STATUS.llmReady ? 'on' : 'off'}">${STATUS.llmReady ? STATUS.llmLabel + ' · ' + STATUS.llmModel : 'AI not set'}</span>`;
+    renderHomeStats();
+    renderSetupQR();
+  } catch(e) { /* server down */ }
+}
+
+function renderHomeStats(){
+  if (!STATUS) return;
+  $('home-stats').innerHTML = [
+    ['WhatsApp', STATUS.waReady ? 'Connected' : (STATUS.waError ? 'Error' : 'Not connected'),
+      STATUS.waReady ? 'on' : (STATUS.waError ? 'off' : 'warn')],
+    ['AI provider', STATUS.llmReady ? `${STATUS.llmLabel}` : 'Not configured', STATUS.llmReady ? 'on' : 'warn'],
+    ['Browser', STATUS.browser ? STATUS.browser.name : 'will download', STATUS.browser ? 'on' : 'warn'],
+  ].map(([k,v,c]) => `<div class="stat"><div class="k">${k}</div><div class="v"><span class="badge ${c}">${v}</span></div></div>`).join('');
+}
+
+/* ---------- chats ---------- */
+let PRESETS = [];
+async function loadChats(){
+  const box = $('chat-list');
+  try {
+    if (!PRESETS.length) PRESETS = (await api('/api/status')).presets;
+    const { chats } = await api('/api/chats');
+    if (!chats.length) { box.innerHTML = '<p class="muted">No chats yet — connect WhatsApp in Setup first.</p>'; return; }
+    box.innerHTML = chats.map(c => `
+      <div class="chatrow">
+        <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
+        <select id="m-${c.id}">${['off','draft','auto'].map(m =>
+          `<option value="${m}" ${c.config.mode === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
+        <select id="s-${c.id}">
+          ${PRESETS.map(p => `<option value="${p}" ${c.config.presetKey === p && c.config.styleType !== 'custom' ? 'selected' : ''}>${p}</option>`).join('')}
+          <option value="__custom" ${c.config.styleType === 'custom' ? 'selected' : ''}>custom</option>
+        </select>
+        <input id="d1-${c.id}" placeholder="min s" value="${c.config.replyDelayMin ?? ''}">
+        <input id="d2-${c.id}" placeholder="max s" value="${c.config.replyDelayMax ?? ''}">
+        <button class="btn sm" data-save="${c.id}">Save</button>
+      </div>`).join('');
+    box.querySelectorAll('[data-save]').forEach(b => b.onclick = () => saveChat(b.dataset.save));
+  } catch(e){ box.innerHTML = '<p class="muted">Could not load chats.</p>'; }
+}
+function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+async function saveChat(id){
+  const v = x => $(x + '-' + CSS.escape(id)).value;
+  await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chatId:id, mode:v('m'), styleType:v('s') === '__custom' ? 'custom' : 'preset',
+      presetKey:v('s'), replyDelayMin:v('d1'), replyDelayMax:v('d2') }) });
+  toast('Saved');
+}
+$('chats-refresh').onclick = loadChats;
+
+/* ---------- setup ---------- */
+let PROVIDERS = {};
+async function loadProviders(){
+  if (Object.keys(PROVIDERS).length) return renderProviderFields();
+  PROVIDERS = await api('/api/providers');
+  $('s-prov').innerHTML = Object.entries(PROVIDERS).map(([k,p]) => `<option value="${k}">${p.label}</option>`).join('');
+  $('s-prov').onchange = renderProviderFields;
+  renderProviderFields();
+}
+function renderProviderFields(){
+  const k = $('s-prov').value, p = PROVIDERS[k];
+  if (!p) return;
+  $('s-models').innerHTML = p.models.map(m => `<option value="${m}">`).join('');
+  if (!$( 's-model').value && p.models[0]) $('s-model').value = p.models[0];
+  $('s-key-wrap').style.display = p.needsKey ? '' : 'none';
+  $('s-url-wrap').style.display = (k === 'custom' || k === 'ollama' || k === 'lmstudio') ? '' : 'none';
+  $('s-baseurl').value = p.baseURL || '';
+  $('s-baseurl').readOnly = k !== 'custom';
+  $('s-keyhint').innerHTML = (p.keyHint || '') + (p.keyUrl ? ` — <a href="${p.keyUrl}" target="_blank" rel="noopener">get a key</a>` : '');
+}
+async function loadSetupState(){
+  const s = await api('/api/settings');
+  if (PROVIDERS[s.llmProvider]) $('s-prov').value = s.llmProvider;
+  renderProviderFields();
+  if (s.llmModel) $('s-model').value = s.llmModel;
+  if (s.llmBaseURL) $('s-baseurl').value = s.llmBaseURL;
+  $('s-dmin').value = s.replyDelayMin; $('s-dmax').value = s.replyDelayMax;
+  $('s-llm-status').textContent = s.llmApiKey ? `Key saved (${s.llmApiKey})` : 'No key saved yet';
+  markStep('step-llm', !!s.llmApiKey || !PROVIDERS[s.llmProvider]?.needsKey);
+  markStep('step-wa', !!(STATUS && STATUS.waReady));
+}
+function markStep(id, done){ $(id).classList.toggle('done', !!done); }
+
+async function renderSetupQR(){
+  const box = $('s-qr');
+  if (!box || !$('view-setup').classList.contains('active')) return;
+  if (!STATUS) return;
+  if (STATUS.waReady) { box.innerHTML = '<span class="badge on">Connected</span>'; markStep('step-wa', true); return; }
+  if (STATUS.qrAvailable) {
+    if (!box.dataset.qr) {
+      const q = await api('/api/qr');
+      if (q.qrImage) {
+        box.dataset.qr = '1';
+        box.innerHTML = `<div class="qrwrap"><img src="${q.qrImage}" width="240" height="240" alt="WhatsApp QR">
+          <div><p class="small">Scan with WhatsApp → Settings → Linked devices → <b>Link a device</b>.<br>The code refreshes automatically — this page polls for it.</p></div></div>`;
+      }
+    }
+    return;
+  }
+  delete box.dataset.qr;
+  if (STATUS.waError) {
+    box.innerHTML = `<div class="err"><b>Couldn’t start WhatsApp:</b><br><code>${esc(STATUS.waError)}</code></div>
+      <p class="hint">Common fixes: install a browser (Chrome/Edge/Brave), delete the <code>.wwebjs_auth</code> folder and restart, or wait 2–3 minutes on first run. Check the terminal for the full log.</p>`;
+  } else {
+    box.innerHTML = '<p class="muted">Starting… this takes 10–30 seconds on first run.</p>';
   }
 }
-load();
+
+$('s-save-llm').onclick = async () => {
+  const body = { llmProvider: $('s-prov').value, llmModel: $('s-model').value.trim(), llmBaseURL: $('s-baseurl').value.trim() };
+  const key = $('s-key').value.trim();
+  if (key) body.llmApiKey = key;
+  const r = await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  $('s-key').value = '';
+  $('s-llm-status').textContent = r.settings.llmApiKey ? `Key saved (${r.settings.llmApiKey})` : 'Saved (no key)';
+  toast('AI settings saved');
+  refreshStatus();
+};
+$('s-test-llm').onclick = async () => {
+  $('s-llm-status').textContent = 'Testing…';
+  const r = await fetch('/api/llm-test', { method:'POST' }).then(r => r.json());
+  $('s-llm-status').innerHTML = r.ok
+    ? `<span class="badge on">works</span> <span class="muted">${esc(r.provider)} · ${esc(r.model)} replied: “${esc(r.reply)}”</span>`
+    : `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
+};
+$('s-save-timing').onclick = async () => {
+  await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ replyDelayMin: $('s-dmin').value, replyDelayMax: $('s-dmax').value }) });
+  toast('Timing saved');
+};
+$('s-upload').onclick = async () => {
+  const f = $('s-file').files[0];
+  if (!f) return toast('Choose a chat export file first');
+  const fd = new FormData();
+  fd.append('file', f);
+  fd.append('identifiers', $('s-ident').value);
+  $('s-upload-result').textContent = 'Analyzing…';
+  const r = await fetch('/api/upload-style', { method:'POST', body: fd }).then(r => r.json());
+  $('s-upload-result').innerHTML = r.ok
+    ? `<span class="badge on">done</span> Learned from <b>${r.messageCount}</b> of your messages. Now pick <b>custom</b> for a chat in the Chats tab.`
+    : `<span class="badge off">failed</span> ${esc(r.error || 'unknown error')}`;
+};
+
+/* ---------- init ---------- */
+route();
+refreshStatus();
+setInterval(refreshStatus, 8000);
 </script>
 </body>
 </html>
