@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WA-Agent — Home</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>WA-Agent</h1>
+  <p class="muted">WhatsApp agent that replies in your style. Gemini-powered, near-zero cost.</p>
+  <div class="row">
+    <a class="btn" href="setup.html">Open Setup</a>
+  </div>
+
+  <div class="card">
+    <h3>Status</h3>
+    <div id="status" class="muted">Loading…</div>
+  </div>
+
+  <div class="card">
+    <h3>Chats</h3>
+    <div id="chats" class="muted">Connect WhatsApp in Setup to see chats.</div>
+  </div>
+
+  <div class="card">
+    <h3>How it works</h3>
+    <ol class="steps">
+      <li>Export any WhatsApp chat (without media) and upload it — the analyzer learns <em>your</em> messages only, even in group chats.</li>
+      <li>Pick a preset (Professional, Business, Friendly, Slang, Short) or use your Custom style per chat.</li>
+      <li>Set mode per chat: <b>Auto</b> replies, <b>Draft</b> prepares, <b>Off</b> stays silent.</li>
+    </ol>
+  </div>
+</div>
+<script>
+async function load(){
+  const s = await fetch('/api/status').then(r=>r.json());
+  document.getElementById('status').innerHTML =
+    `WhatsApp: <span class="badge ${s.waReady?'on':'off'}">${s.waReady?'connected':'not connected'}</span> ` +
+    `Gemini key: <span class="badge ${s.geminiKeySet?'on':'off'}">${s.geminiKeySet?'set':'missing'}</span>`;
+  if(s.waReady){
+    const c = await fetch('/api/chats').then(r=>r.json());
+    document.getElementById('chats').innerHTML = c.chats.length
+      ? '<table><tr><th>Chat</th><th>Mode</th><th>Style</th></tr>' + c.chats.map(x=>
+        `<tr><td>${x.name}${x.isGroup?' (group)':''}</td><td>${x.config.mode}</td><td>${x.config.styleType==='custom'?'custom':x.config.presetKey}</td></tr>`).join('') + '</table>'
+      : 'No chats found.';
+  }
+}
+load();
+</script>
+</body>
+</html>
