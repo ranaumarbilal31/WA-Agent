@@ -113,20 +113,31 @@ app.get('/api/qr', async (req, res) => {
 
 app.get('/api/chats', async (req, res) => {
   if (!waReady) return res.json({ chats: [] });
-  const chats = await wa.getChats();
-  const customs = Object.fromEntries(store.getStyles().map(s => [s.id, s.name]));
-  res.json({
-    chats: chats.slice(0, 100).map(c => {
-      const cfg = store.getChatConfig(c.id._serialized);
-      const styleName = cfg.styleId.startsWith('custom:')
-        ? (customs[cfg.styleId] || 'custom')
-        : (PRESETS[cfg.styleId.slice(7)]?.label || cfg.styleId);
-      return {
-        id: c.id._serialized, name: c.name || c.id.user, isGroup: c.isGroup,
-        config: { ...cfg, styleName },
-      };
-    }),
-  });
+  // getChats() can transiently fail right after pairing — retry a few times
+  // before giving up, and always answer JSON so the UI can show the reason.
+  let lastErr = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const chats = await wa.getChats();
+      const customs = Object.fromEntries(store.getStyles().map(s => [s.id, s.name]));
+      return res.json({
+        chats: chats.slice(0, 200).map(c => {
+          const cfg = store.getChatConfig(c.id._serialized);
+          const styleName = cfg.styleId.startsWith('custom:')
+            ? (customs[cfg.styleId] || 'custom')
+            : (PRESETS[cfg.styleId.slice(7)]?.label || cfg.styleId);
+          return {
+            id: c.id._serialized, name: c.name || c.id.user, isGroup: c.isGroup,
+            config: { ...cfg, styleName },
+          };
+        }),
+      });
+    } catch (e) {
+      lastErr = e.message || String(e);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  res.json({ chats: [], error: lastErr || 'could not fetch chats from WhatsApp' });
 });
 
 app.post('/api/chat-config', (req, res) => {

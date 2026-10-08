@@ -400,7 +400,14 @@ async function loadChats(){
   const box = $('chat-list');
   try {
     await loadStyles();
-    const { chats } = await api('/api/chats');
+    const data = await api('/api/chats');
+    if (data.error && !(data.chats || []).length) {
+      box.innerHTML = `<p class="muted">Could not load chats: ${esc(data.error)}</p>
+        <p class="hint">Try the Refresh button — WhatsApp sometimes needs a moment after pairing.</p>
+        <button class="btn ghost sm" onclick="loadChats()">Retry</button>`;
+      return;
+    }
+    const chats = data.chats || [];
     CHATS = chats || [];
     populateSendPicker();
     if (!chats.length) { box.innerHTML = '<p class="muted">No chats yet — connect WhatsApp in Setup first.</p>'; return; }
