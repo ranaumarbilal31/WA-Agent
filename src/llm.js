@@ -14,30 +14,30 @@ const PROVIDERS = {
   gemini: {
     label: 'Google Gemini', kind: 'openai',
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    models: ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash'],
+    models: ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.5-flash'],
     needsKey: true, keyUrl: 'https://aistudio.google.com', keyHint: 'Free key from Google AI Studio',
   },
   openai: {
     label: 'OpenAI', kind: 'openai',
     baseURL: 'https://api.openai.com/v1',
-    models: ['gpt-5-mini', 'gpt-5', 'gpt-4.1-mini'],
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'o3-mini', 'o1'],
     needsKey: true, keyUrl: 'https://platform.openai.com/api-keys',
   },
   anthropic: {
     label: 'Anthropic Claude', kind: 'anthropic',
-    models: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6'],
+    models: ['claude-3-7-sonnet-latest', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest'],
     needsKey: true, keyUrl: 'https://console.anthropic.com',
   },
   xai: {
     label: 'xAI Grok', kind: 'openai',
     baseURL: 'https://api.x.ai/v1',
-    models: ['grok-4', 'grok-3-mini', 'grok-3'],
+    models: ['grok-2-latest', 'grok-2', 'grok-beta'],
     needsKey: true, keyUrl: 'https://console.x.ai',
   },
   openrouter: {
     label: 'OpenRouter (Claude, Llama/Meta, Grok + more)', kind: 'openai',
     baseURL: 'https://openrouter.ai/api/v1',
-    models: ['anthropic/claude-sonnet-4', 'x-ai/grok-4', 'meta-llama/llama-4-maverick', 'google/gemini-2.5-flash'],
+    models: ['meta-llama/llama-3.3-70b-instruct', 'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash-001', 'openai/gpt-4o-mini'],
     needsKey: true, keyUrl: 'https://openrouter.ai/keys', keyHint: 'One key unlocks Claude, Meta Llama, Grok and more',
   },
   ollama: {
@@ -57,58 +57,132 @@ const PROVIDERS = {
   },
 };
 
-function activeConfig() {
+function activeConfig(overrides = {}) {
   const s = store.getSettings();
-  const p = PROVIDERS[s.llmProvider] || PROVIDERS.gemini;
+  const provider = (overrides.provider || s.llmProvider) in PROVIDERS ? (overrides.provider || s.llmProvider) : 'gemini';
+  const meta = PROVIDERS[provider] || PROVIDERS.gemini;
+
+  let apiKey = overrides.apiKey;
+  if (apiKey === undefined || apiKey === null) {
+    apiKey = s.providerKeys?.[provider] || (s.llmProvider === provider ? s.llmApiKey : '') || (provider === 'gemini' ? config.geminiApiKey : '') || '';
+  }
+
+  const baseURL = (overrides.baseURL !== undefined ? overrides.baseURL : (s.llmBaseURL || meta.baseURL || '')).replace(/\/$/, '');
+  const model = overrides.model || s.providerModels?.[provider] || (s.llmProvider === provider ? s.llmModel : '') || meta.models[0] || '';
+
   return {
-    provider: s.llmProvider in PROVIDERS ? s.llmProvider : 'gemini',
-    meta: p,
-    apiKey: s.llmApiKey || config.geminiApiKey || '',
-    baseURL: (s.llmBaseURL || p.baseURL || '').replace(/\/$/, ''),
-    model: s.llmModel || p.models[0] || '',
+    provider,
+    meta,
+    apiKey: String(apiKey || '').trim(),
+    baseURL,
+    model: String(model || '').trim(),
   };
 }
 
-async function openAIChat({ baseURL, apiKey, model, system, messages }) {
+function cleanReplyText(text) {
+  if (!text) return '';
+  let out = String(text).trim();
+  // Strip surrounding quotes if the model quoted its entire response
+  if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) {
+    out = out.slice(1, -1).trim();
+  }
+  return out;
+}
+
+async function openAIChat({ baseURL, apiKey, model, system, messages, meta }) {
   if (!baseURL) throw new Error('No API endpoint set for this provider.');
   if (!model) throw new Error('No model set — pick or type a model id.');
   const headers = { 'content-type': 'application/json' };
   if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
+
+  const validMsgs = (messages || [])
+    .filter(m => m && typeof m.text === 'string' && m.text.trim().length > 0)
+    .map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text.trim() }));
+
+  const chatMessages = [];
+  if (system && system.trim()) {
+    chatMessages.push({ role: 'system', content: system.trim() });
+  }
+  if (validMsgs.length > 0) {
+    chatMessages.push(...validMsgs);
+  } else {
+    chatMessages.push({ role: 'user', content: 'Hello' });
+  }
+
   const res = await fetch(`${baseURL}/chat/completions`, {
-    method: 'POST', headers,
+    method: 'POST',
+    headers,
+    signal: AbortSignal.timeout(35000),
     body: JSON.stringify({
       model,
-      messages: [{ role: 'system', content: system },
-        ...messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text }))],
-      temperature: 0.9, max_tokens: 1024,
+      messages: chatMessages,
+      temperature: 0.9,
+      max_tokens: 1024,
     }),
   });
-  if (!res.ok) throw new Error(`LLM error ${res.status}: ${(await res.text()).slice(0, 220)}`);
+
+  if (!res.ok) {
+    let errMsg = '';
+    try {
+      const errJson = await res.json();
+      errMsg = errJson?.error?.message || errJson?.error || JSON.stringify(errJson);
+    } catch {
+      errMsg = (await res.text().catch(() => '')).slice(0, 220);
+    }
+    const providerName = meta?.label || 'LLM';
+    throw new Error(`${providerName} error (${res.status}): ${errMsg || 'Request failed'}`);
+  }
+
   const data = await res.json();
   const text = data.choices?.[0]?.message?.content;
   if (!text) throw new Error('Empty reply from model.');
-  return text;
+  return cleanReplyText(text);
 }
 
-async function anthropicChat({ apiKey, model, system, messages }) {
+async function anthropicChat({ apiKey, model, system, messages, meta }) {
   if (!apiKey) throw new Error('Anthropic needs an API key.');
   if (!model) throw new Error('No model set — pick or type a model id.');
+
+  const validMsgs = (messages || [])
+    .filter(m => m && typeof m.text === 'string' && m.text.trim().length > 0)
+    .map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text.trim() }));
+
+  if (validMsgs.length === 0) {
+    validMsgs.push({ role: 'user', content: 'Hello' });
+  }
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
-      'content-type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
     },
+    signal: AbortSignal.timeout(35000),
     body: JSON.stringify({
-      model, max_tokens: 1024, system,
-      messages: messages.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })),
+      model,
+      max_tokens: 1024,
+      system: system || undefined,
+      messages: validMsgs,
     }),
   });
-  if (!res.ok) throw new Error(`Claude error ${res.status}: ${(await res.text()).slice(0, 220)}`);
+
+  if (!res.ok) {
+    let errMsg = '';
+    try {
+      const errJson = await res.json();
+      errMsg = errJson?.error?.message || errJson?.error || JSON.stringify(errJson);
+    } catch {
+      errMsg = (await res.text().catch(() => '')).slice(0, 220);
+    }
+    throw new Error(`Claude error (${res.status}): ${errMsg || 'Request failed'}`);
+  }
+
   const data = await res.json();
   const text = (data.content || []).map(b => b.text || '').join('');
   if (!text) throw new Error('Empty reply from model.');
-  return text;
+  return cleanReplyText(text);
 }
 
 function buildSystemPrompt(chatConfig, styles) {
@@ -138,45 +212,114 @@ function buildSystemPrompt(chatConfig, styles) {
 /**
  * List available models from a provider (used by "Load models" in Setup).
  * Works with any OpenAI-compatible endpoint and Anthropic.
+ * Automatically falls back to the saved key if not passed.
  */
 async function listModels({ provider, apiKey, baseURL }) {
   const meta = PROVIDERS[provider];
   if (!meta) throw new Error('Unknown provider.');
+
+  const s = store.getSettings();
+  const resolvedKey = (apiKey || '').trim() ||
+    s.providerKeys?.[provider] ||
+    (s.llmProvider === provider ? s.llmApiKey : '') ||
+    (provider === 'gemini' ? config.geminiApiKey : '') ||
+    '';
+
   if (meta.kind === 'anthropic') {
-    if (!apiKey) throw new Error('Paste your API key first.');
+    if (!resolvedKey) throw new Error('Paste your API key first.');
     const res = await fetch('https://api.anthropic.com/v1/models', {
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: {
+        'x-api-key': resolvedKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
     });
-    if (!res.ok) throw new Error(`Could not list models (${res.status}). Check the key.`);
+    if (!res.ok) {
+      const err = await res.text().catch(() => '');
+      throw new Error(`Could not list models (${res.status}). Check the key: ${err.slice(0, 150)}`);
+    }
     const data = await res.json();
     return (data.data || []).map(m => m.id);
   }
+
   const url = (baseURL || meta.baseURL || '').replace(/\/$/, '');
   if (!url) throw new Error('No API endpoint set.');
   const headers = {};
-  if (apiKey) headers['authorization'] = `Bearer ${apiKey}`;
+  if (resolvedKey) headers['authorization'] = `Bearer ${resolvedKey}`;
+
   const res = await fetch(`${url}/models`, { headers });
-  if (!res.ok) throw new Error(`Could not list models (${res.status}). Check the endpoint/key.`);
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Could not list models (${res.status}). Check endpoint/key: ${err.slice(0, 150)}`);
+  }
+
   const data = await res.json();
-  return (data.data || []).map(m => String(m.id).replace(/^models\//, '')).sort();
+  const rawList = (data.data || []).map(m => String(m.id).replace(/^models\//, ''));
+
+  // If Gemini, prioritize conversational models at top
+  if (provider === 'gemini') {
+    const chatModels = rawList.filter(id => !id.includes('embedding') && !id.includes('imagen') && !id.includes('aqa'));
+    return (chatModels.length > 0 ? chatModels : rawList).sort((a, b) => {
+      const aG = a.startsWith('gemini');
+      const bG = b.startsWith('gemini');
+      if (aG && !bG) return -1;
+      if (!aG && bG) return 1;
+      return a.localeCompare(b);
+    });
+  }
+
+  return rawList.sort();
+}
+
+let lastLlmError = null;
+
+function getLastLlmError() {
+  return lastLlmError;
+}
+
+function clearLastLlmError() {
+  lastLlmError = null;
 }
 
 async function generateReply(chatConfig, history, incomingText) {
+  if (!incomingText || !incomingText.trim()) return '';
   const c = activeConfig();
   const system = buildSystemPrompt(chatConfig, store.getStyles());
-  const messages = [...history.slice(-40), { role: 'user', text: incomingText }];
-  if (c.meta.kind === 'anthropic') return anthropicChat({ ...c, system, messages });
-  return openAIChat({ ...c, system, messages });
+  const messages = [...(history || []).slice(-40), { role: 'user', text: incomingText.trim() }];
+  try {
+    const text = c.meta.kind === 'anthropic'
+      ? await anthropicChat({ ...c, system, messages })
+      : await openAIChat({ ...c, system, messages });
+    lastLlmError = null;
+    return text;
+  } catch (err) {
+    lastLlmError = {
+      message: err.message || 'LLM generation failed',
+      provider: c.meta.label,
+      model: c.model,
+      timestamp: Date.now(),
+    };
+    throw err;
+  }
 }
 
-async function testConnection() {
-  const c = activeConfig();
+async function testConnection(overrides = {}) {
+  const c = activeConfig(overrides);
   const system = 'You are a test assistant.';
   const messages = [{ role: 'user', text: 'Reply with exactly: OK' }];
   const text = c.meta.kind === 'anthropic'
     ? await anthropicChat({ ...c, system, messages })
     : await openAIChat({ ...c, system, messages });
-  return { ok: true, reply: text.slice(0, 200), provider: c.meta.label, model: c.model };
+  return { ok: true, reply: text.trim().slice(0, 200), provider: c.meta.label, model: c.model };
 }
 
-module.exports = { PROVIDERS, activeConfig, generateReply, testConnection, buildSystemPrompt, listModels };
+module.exports = {
+  PROVIDERS,
+  activeConfig,
+  generateReply,
+  testConnection,
+  buildSystemPrompt,
+  listModels,
+  getLastLlmError,
+  clearLastLlmError,
+};
