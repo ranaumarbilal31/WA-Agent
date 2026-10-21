@@ -21,35 +21,28 @@ function save(db) {
 }
 
 function getChatConfig(chatId) {
-  let db = load();
-  const raw = db.chats[chatId] || {};
-  // migrate old shape {mode, styleType, presetKey, customProfile} -> {mode, styleId}
-  let styleId = raw.styleId;
-  if (!styleId) {
-    if (raw.styleType === 'custom' && raw.customProfile) {
-      styleId = saveStyle('My style', raw.customProfile).id;
-      db = load(); // reload: saveStyle wrote its own copy
-    } else {
-      styleId = 'preset:' + (raw.presetKey || 'friendly');
-    }
-    db.chats[chatId] = { ...raw, styleId };
-    delete db.chats[chatId].styleType;
-    delete db.chats[chatId].presetKey;
-    delete db.chats[chatId].customProfile;
-    save(db);
+  const db = load();
+  const raw = db.chats[chatId];
+  if (!raw) {
+    return { mode: 'off', styleId: 'preset:friendly', replyDelayMin: null, replyDelayMax: null, sendBlueTick: null };
   }
-  return { mode: 'off', replyDelayMin: null, replyDelayMax: null, ...db.chats[chatId] };
+  const styleId = raw.styleId || (raw.presetKey ? 'preset:' + raw.presetKey : 'preset:friendly');
+  return { mode: 'off', replyDelayMin: null, replyDelayMax: null, sendBlueTick: null, ...raw, styleId };
 }
 
 function setChatConfig(chatId, cfg) {
   const db = load();
-  db.chats[chatId] = { ...getChatConfig(chatId), ...cfg };
+  const current = getChatConfig(chatId);
+  db.chats[chatId] = { ...current, ...cfg };
   save(db);
 }
 
 function setChatConfigBulk(chatIds, cfg) {
   const db = load();
-  for (const id of chatIds) db.chats[id] = { ...getChatConfig(id), ...cfg };
+  for (const id of chatIds) {
+    const current = getChatConfig(id);
+    db.chats[id] = { ...current, ...cfg };
+  }
   save(db);
 }
 
@@ -96,31 +89,96 @@ function getHistory(chatId) {
   return load().histories[chatId] || [];
 }
 
-// ---------- Settings (BYOK + reply delay) ----------
+// ---------- Settings (BYOK + reply delay + blue tick) ----------
 const DEFAULT_SETTINGS = {
   llmProvider: 'gemini',     // gemini | openai | anthropic | xai | openrouter | ollama | lmstudio | custom
   llmApiKey: '',             // BYOK: user's own key, overrides env
   llmBaseURL: '',            // override endpoint (custom provider / local)
   llmModel: '',              // override model (empty = provider default)
+  providerKeys: {},          // keys remembered per provider
+  providerModels: {},        // models remembered per provider
   replyDelayMin: 8,          // seconds
   replyDelayMax: 25,         // seconds
+  sendBlueTick: false,       // false = silent ghost mode (gray ticks), true = send read receipts (blue ticks)
 };
 
 function getSettings() {
   const db = load();
   const raw = db.settings || {};
-  const s = { ...DEFAULT_SETTINGS, ...raw };
+  const s = {
+    ...DEFAULT_SETTINGS,
+    ...raw,
+    providerKeys: { ...(DEFAULT_SETTINGS.providerKeys), ...(raw.providerKeys || {}) },
+    providerModels: { ...(DEFAULT_SETTINGS.providerModels), ...(raw.providerModels || {}) },
+  };
   // migrate old gemini-only settings
   if (!s.llmApiKey && raw.geminiApiKey) { s.llmProvider = 'gemini'; s.llmApiKey = raw.geminiApiKey; }
   if (!s.llmModel && raw.geminiModel) s.llmModel = raw.geminiModel;
+  if (s.llmApiKey && !s.providerKeys[s.llmProvider]) {
+    s.providerKeys[s.llmProvider] = s.llmApiKey;
+  }
   return s;
 }
 
 function setSettings(patch) {
   const db = load();
-  db.settings = { ...getSettings(), ...patch };
+  const current = getSettings();
+  const updated = { ...current, ...patch };
+  if (patch.providerKeys) {
+    updated.providerKeys = { ...current.providerKeys, ...patch.providerKeys };
+  }
+  if (patch.providerModels) {
+    updated.providerModels = { ...current.providerModels, ...patch.providerModels };
+  }
+  if (patch.llmApiKey !== undefined) {
+    const prov = updated.llmProvider || 'gemini';
+    updated.providerKeys[prov] = patch.llmApiKey;
+  }
+  if (patch.llmModel !== undefined && patch.llmModel) {
+    const prov = updated.llmProvider || 'gemini';
+    updated.providerModels[prov] = patch.llmModel;
+  }
+  db.settings = updated;
   save(db);
   return db.settings;
 }
 
-module.exports = { getChatConfig, setChatConfig, setChatConfigBulk, pushHistory, getHistory, load, getSettings, setSettings, getStyles, saveStyle, deleteStyle };
+function clearProviderKey(provider) {
+  const db = load();
+  const current = getSettings();
+  const updated = { ...current };
+  if (updated.providerKeys) {
+    delete updated.providerKeys[provider];
+  }
+  if (updated.llmProvider === provider) {
+    updated.llmApiKey = '';
+  }
+  db.settings = updated;
+  save(db);
+  return db.settings;
+}
+
+function clearAllKeys() {
+  const db = load();
+  const current = getSettings();
+  const updated = { ...current, providerKeys: {}, llmApiKey: '' };
+  db.settings = updated;
+  save(db);
+  return db.settings;
+}
+
+module.exports = {
+  getChatConfig,
+  setChatConfig,
+  setChatConfigBulk,
+  pushHistory,
+  getHistory,
+  load,
+  getSettings,
+  setSettings,
+  clearProviderKey,
+  clearAllKeys,
+  getStyles,
+  saveStyle,
+  deleteStyle,
+};
