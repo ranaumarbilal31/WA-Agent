@@ -5,118 +5,676 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WA-Agent</title>
 <style>
-:root{
-  --bg:#0a0c0f; --side:#0f1216; --card:#14181e; --card2:#181d24;
-  --border:#22282f; --text:#e9ebee; --muted:#9aa1ab; --faint:#6b7280;
-  --accent:#4c8dff; --accent-d:#3a6fd0; --green:#2f9e5f; --red:#c04545;
-  --radius:14px;
+:root {
+  --bg: #f8fafc;
+  --side: #ffffff;
+  --card: #ffffff;
+  --card2: #f8fafc;
+  --border: #e2e8f0;
+  --border-subtle: #edf2f7;
+  --text: #0f172a;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --accent: #2563eb;
+  --accent-d: #1d4ed8;
+  --accent-light: #eff6ff;
+  --green: #10b981;
+  --green-light: #eafaf1;
+  --red: #ef4444;
+  --red-light: #fee2e2;
+  --amber: #f59e0b;
+  --amber-light: #fef3c7;
+  --purple: #7c3aed;
+  --purple-light: #f3e8ff;
+  --radius: 18px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --shadow-hover: 0 14px 35px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
+  --shadow-btn-blue: 0 10px 24px -4px rgba(37, 99, 235, 0.38);
 }
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px}
-.app{display:flex;min-height:100vh}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+.app { display: flex; min-height: 100vh; }
+
 /* Sidebar */
-.sidebar{width:230px;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
-.brand .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#4c8dff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
-.brand .name{font-weight:700;font-size:16px}
-.brand .sub{font-size:11px;color:var(--faint)}
-.nav{display:flex;flex-direction:column;gap:4px;margin-top:6px}
-.nav button{display:flex;align-items:center;gap:12px;background:none;border:0;color:var(--muted);padding:10px 12px;border-radius:10px;font-size:14px;cursor:pointer;text-align:left;width:100%}
-.nav button svg{width:18px;height:18px;flex:none}
-.nav button:hover{background:var(--card2);color:var(--text)}
-.nav button.active{background:var(--card2);color:var(--text)}
-.side-foot{margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
-.dot.on{background:var(--green)} .dot.off{background:var(--red)} .dot.warn{background:#d9a13b}
-/* Main */
-.main{flex:1;min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;gap:12px;padding:18px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,12,15,.92);backdrop-filter:blur(6px);z-index:5}
-.topbar h1{font-size:19px;margin:0;font-weight:650}
-.topbar .spacer{flex:1}
-.content{padding:26px 28px;max-width:980px;width:100%;margin:0 auto}
-.view{display:none}.view.active{display:block;animation:fade .18s ease}
-@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-/* Cards */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin:0 0 18px}
-.card h2{margin:0 0 6px;font-size:17px;font-weight:650}
-.card h3{margin:0 0 6px;font-size:15px;font-weight:650}
-.card p{margin:8px 0;color:var(--muted);line-height:1.55}
-.muted{color:var(--muted)} .small{font-size:13px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-@media(max-width:820px){.grid2,.grid3{grid-template-columns:1fr}.sidebar{width:64px}.sidebar .lbl,.brand .txt{display:none}}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
-.stat .k{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.stat .v{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
-/* Controls */
-.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:600;background:var(--card2);border:1px solid var(--border);color:var(--muted)}
-.badge.on{color:#7bd99a;border-color:#245c3a;background:#12261a}
-.badge.off{color:#f08686;border-color:#5c2424;background:#261212}
-.badge.warn{color:#e8c37a;border-color:#5c4a24;background:#26200f}
-.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
-.btn:hover{background:var(--accent-d)}
-.btn.ghost{background:var(--card2);border:1px solid var(--border);color:var(--text)}
-.btn.ghost:hover{border-color:var(--accent);color:var(--text)}
-.btn.sm{padding:7px 13px;font-size:13px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
-input[type=text],input[type=password],select,textarea{width:100%;background:#0c0f13;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font-size:14px}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
-input[type=file]{color:var(--muted);font-size:13px}
-.hint{font-size:12.5px;color:var(--faint);line-height:1.5}
-a{color:var(--accent)}
-code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:12.5px;color:#c9d1d9;word-break:break-all}
-/* Steps */
-.step{display:flex;gap:16px}
-.step .n{flex:none;width:32px;height:32px;border-radius:50%;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--accent)}
-.step.done .n{background:var(--accent);color:#fff;border-color:var(--accent)}
-/* Chat rows */
-.chatrow{display:flex;gap:12px;align-items:center;padding:14px 6px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.chatrow:last-child{border-bottom:0}
-.chatrow .nm{font-weight:600;min-width:170px;flex:1}
-.chatrow .tag{font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-left:8px}
-.chatrow select,.chatrow input{width:auto}
-.chatrow select{min-width:110px}
-.chatrow input{width:64px}
+.sidebar {
+  width: 240px;
+  background: var(--side);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex: none;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px 22px;
+}
+.brand .mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #25D366, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.28);
+}
+.brand .name { font-weight: 700; font-size: 16px; color: var(--text); }
+.brand .sub { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+
+.nav { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+.nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all .15s ease;
+}
+.nav button svg { width: 19px; height: 19px; flex: none; stroke: currentColor; }
+.nav button:hover { background: #f8fafc; color: var(--text); }
+.nav button.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav button.active svg { stroke: var(--accent); }
+
+.side-foot {
+  margin-top: auto;
+  padding: 14px 10px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--faint);
+  flex: none;
+  transition: background .2s ease;
+}
+.dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+.dot.off { background: var(--red); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.dot.warn { background: var(--amber); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+
+/* Main layout */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+.topbar h1 { font-size: 20px; margin: 0; font-weight: 700; color: var(--text); }
+.topbar .spacer { flex: 1; }
+.content { padding: 30px 32px 50px; max-width: 980px; width: 100%; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; animation: fade .18s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* Cards & Containers */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 26px 28px;
+  margin: 0 0 22px;
+}
+.card h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text); }
+.card h3 { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: #1e293b; }
+.card p { margin: 8px 0; color: var(--muted); line-height: 1.6; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+@media(max-width: 860px) {
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  .sidebar { width: 68px; padding: 18px 10px; }
+  .sidebar .lbl, .brand .txt { display: none; }
+  .content { padding: 20px 16px; }
+  .topbar { padding: 14px 18px; }
+}
+
+/* Hero Section (Mockup Match) */
+.hero-wrap {
+  padding: 10px 0 28px 0;
+}
+.hero-badge-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.hero-title {
+  margin: 0 0 12px 0;
+  font-size: 34px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+.hero-desc {
+  margin: 0 0 24px 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 620px;
+}
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 11px 24px;
+  border-radius: 9999px;
+  text-decoration: none;
+  box-shadow: var(--shadow-btn-blue);
+  transition: all 0.18s ease;
+  border: none;
+  cursor: pointer;
+}
+.btn-hero-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.48);
+}
+.btn-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 11px 22px;
+  border-radius: 9999px;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+.btn-hero-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+/* Stat Cards (Mockup Match) */
+.home-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--border);
+}
+.stat-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  width: fit-content;
+}
+.stat-pill.pill-green { background: var(--green-light); color: #16a34a; }
+.stat-pill.pill-blue { background: var(--accent-light); color: var(--accent); }
+.stat-pill.pill-purple { background: var(--purple-light); color: var(--purple); }
+.stat-pill.pill-amber { background: var(--amber-light); color: #d97706; }
+.stat-pill.pill-red { background: var(--red-light); color: var(--red); }
+.stat-chevron {
+  margin-left: auto;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* How It Works Card (Mockup Match) */
+.how-card {
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: 34px 38px;
+  margin-bottom: 24px;
+}
+.how-title {
+  margin: 0 0 26px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.how-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.how-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.how-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.how-content {
+  flex: 1;
+}
+.how-item-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #0f172a;
+  margin-bottom: 3px;
+}
+.how-item-desc {
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+/* Global Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.badge.on {
+  color: #15803d;
+  border-color: #bbf7d0;
+  background: #dcfce7;
+}
+.badge.off {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fee2e2;
+}
+.badge.warn {
+  color: #b45309;
+  border-color: #fde68a;
+  background: #fef3c7;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
+  transition: all .15s ease;
+}
+.btn:hover { background: var(--accent-d); }
+.btn.ghost {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  color: #334155;
+  box-shadow: var(--shadow-sm);
+}
+.btn.ghost:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: var(--text);
+}
+.btn.sm { padding: 7px 13px; font-size: 13px; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+label.f {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  min-width: 0;
+}
+input[type=text], input[type=password], select, textarea {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+input[type=file] { color: var(--muted); font-size: 13px; }
+.hint { font-size: 12.5px; color: var(--faint); line-height: 1.5; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 12.5px;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+/* Steps in Setup */
+.step { display: flex; gap: 18px; align-items: flex-start; }
+.step .n {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+}
+.step.done .n {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* QR */
-.qrwrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
-.qrwrap img{border-radius:12px;background:#fff;padding:10px}
-.err{background:#261212;border:1px solid #5c2424;border-radius:10px;padding:12px 14px;font-size:13px;color:#f0a8a8;margin-top:10px}
-/* Hero */
-.hero{background:linear-gradient(135deg,#141a26,#191423);border:1px solid var(--border);border-radius:18px;padding:34px;margin-bottom:18px}
-.hero h1{margin:0 0 10px;font-size:30px;letter-spacing:-.02em}
-.hero p{color:var(--muted);max-width:560px;line-height:1.6;margin:0 0 20px}
-.howto{counter-reset:how;list-style:none;padding:0;margin:0}
-.howto li{counter-increment:how;display:flex;gap:14px;margin:16px 0;align-items:flex-start}
-.howto li::before{content:counter(how);flex:none;width:28px;height:28px;border-radius:50%;background:var(--card2);border:1px solid var(--border);color:var(--accent);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
-.howto b{color:var(--text)} .howto span{color:var(--muted);font-size:14px;line-height:1.55}
-/* Bulk bar + chat items */
-.bulkbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:12px 0}
-.bulkbar select{width:auto;min-width:130px}
-.banner{background:#15202e;border:1px solid #2b4a6e;border-radius:10px;padding:12px 16px;margin:12px 0;font-size:14px;line-height:1.5}
-.banner b{color:#fff}
-.chatitem{border-bottom:1px solid var(--border)}
-.chatitem:last-child{border-bottom:0}
-.chathead{display:flex;gap:12px;align-items:center;padding:13px 6px;cursor:pointer}
-.chathead:hover{background:var(--card2)}
-.chathead input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
-.chathead .nm{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.chathead .tag{font-size:11px;color:var(--faint);border:1px solid var(--border);border-radius:6px;padding:2px 7px;margin-left:8px;flex:none}
-.chatedit{display:none;padding:4px 6px 16px 34px}
-.chatitem.open .chatedit{display:block}
-.chatedit .grid2{margin-bottom:10px}
-.stylelib-row{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px solid var(--border)}
-.stylelib-row:last-child{border:0}
-.stylelib-row .nm{font-weight:600;flex:1}
+.qrwrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.qrwrap img {
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.err {
+  background: var(--red-light);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: #991b1b;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* Chat view styles */
+.bulkbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 14px 0;
+}
+.bulkbar select { width: auto; min-width: 130px; }
+.banner {
+  background: var(--accent-light);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 14px 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #1e3a8a;
+}
+.banner b { color: #1e40af; }
+.chatitem { border-bottom: 1px solid var(--border-subtle); transition: background .15s ease; }
+.chatitem:last-child { border-bottom: 0; }
+.chathead {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 8px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background .15s ease;
+}
+.chathead:hover { background: #f8fafc; }
+.chathead input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
+.chathead .nm { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.chathead .tag {
+  font-size: 11px;
+  color: var(--muted);
+  background: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  margin-left: 8px;
+  flex: none;
+}
+.chatedit {
+  display: none;
+  padding: 10px 14px 18px 36px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin: 4px 0 14px;
+  border: 1px solid var(--border-subtle);
+}
+.chatitem.open .chatedit { display: block; }
+.chatedit .grid2 { margin-bottom: 12px; }
+
+.stylelib-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.stylelib-row:last-child { border: 0; }
+.stylelib-row .nm { font-weight: 600; flex: 1; color: var(--text); }
+
 /* Model picker list */
-.modellist{max-height:230px;overflow:auto;border:1px solid var(--border);border-radius:10px;margin-top:10px;background:#0c0f13}
-.modellist button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--border);color:var(--text);padding:9px 13px;font-size:13px;cursor:pointer;font-family:inherit}
-.modellist button:hover{background:var(--card2)}
-.modellist button:last-child{border-bottom:0}
-.modellist button.picked{background:#15202e;color:#fff}
-.tone-chip{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:16px;padding:3px 11px;background:var(--card2)}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:14px;display:none;z-index:50}
+.modellist {
+  max-height: 230px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 10px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+.modellist button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text);
+  padding: 10px 14px;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s ease;
+}
+.modellist button:hover { background: #f8fafc; }
+.modellist button:last-child { border-bottom: 0; }
+.modellist button.picked { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+
+.tone-chip {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  background: #f1f5f9;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  display: none;
+  z-index: 100;
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.25);
+}
+
+/* Chat conversation preview bubbles (WhatsApp authenticity) */
+.msgs-box-container {
+  background: #efeae2;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 280px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+.msg-bubble {
+  max-width: 78%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  word-break: break-word;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+}
+.msg-bubble.me {
+  background: #d9fdd3;
+  color: #111b21;
+  margin-left: auto;
+  border-top-right-radius: 0;
+}
+.msg-bubble.them {
+  background: #ffffff;
+  color: #111b21;
+  margin-right: auto;
+  border-top-left-radius: 0;
+}
+.msg-time { font-size: 10.5px; color: #667781; margin-top: 3px; text-align: right; }
 </style>
 </head>
 <body>
@@ -124,14 +682,29 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
   <aside class="sidebar">
     <div class="brand">
       <div class="mark">WA</div>
-      <div class="txt"><div class="name">WA-Agent</div><div class="sub">reply in your style</div></div>
+      <div class="txt">
+        <div class="name">WA-Agent</div>
+        <div class="sub">reply in your style</div>
+      </div>
     </div>
     <nav class="nav">
-      <button data-route="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg><span class="lbl">Home</span></button>
-      <button data-route="chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg><span class="lbl">Chats</span></button>
-      <button data-route="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg><span class="lbl">Setup</span></button>
+      <button data-route="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>
+        <span class="lbl">Home</span>
+      </button>
+      <button data-route="chats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>
+        <span class="lbl">Chats</span>
+      </button>
+      <button data-route="setup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
+        <span class="lbl">Setup</span>
+      </button>
     </nav>
-    <div class="side-foot"><span class="dot" id="side-dot"></span><span id="side-text" class="lbl">connecting…</span></div>
+    <div class="side-foot">
+      <span class="dot" id="side-dot"></span>
+      <span id="side-text" class="lbl">connecting…</span>
+    </div>
   </aside>
 
   <div class="main">
@@ -142,25 +715,63 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
     </div>
     <div class="content">
 
-      <!-- HOME -->
+      <!-- HOME (Pixel-accurate Mockup Implementation) -->
       <section class="view" id="view-home">
-        <div class="hero">
-          <h1>Your WhatsApp, in your words.</h1>
-          <p>WA-Agent learns how you text from your exported chats and replies for you — per chat, in the right tone, with human-like timing. Bring any AI key, run it for next to nothing.</p>
-          <div class="row">
-            <a class="btn" href="#/setup">Open setup</a>
-            <a class="btn ghost" href="#/chats">Manage chats</a>
+        <div class="hero-wrap">
+          <div class="hero-badge-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none">
+              <path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/>
+              <path fill="#fff" d="M17.52 14.33c-.22-.11-1.3-.64-1.5-.71-.2-.07-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.17-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.21-.69-1.66-.18-.43-.37-.37-.5-.38l-.43-.01c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.86s.8 2.15.91 2.3c.11.15 1.57 2.4 3.81 3.36.53.23.95.37 1.27.47.53.17 1.02.15 1.4.09.43-.06 1.3-.53 1.48-1.04.19-.51.19-.95.13-1.04-.06-.1-.2-.16-.42-.27z"/>
+            </svg>
+          </div>
+          <h1 class="hero-title">Your WhatsApp, in your words.</h1>
+          <p class="hero-desc">WA-Agent learns how you text from your exported chats and replies for you — per chat, in the right tone, with human-like timing. Bring any AI key, run it for next to nothing.</p>
+          <div class="hero-actions">
+            <a class="btn-hero-primary" href="#/setup">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              Open setup
+            </a>
+            <a class="btn-hero-secondary" href="#/chats">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Manage chats
+            </a>
           </div>
         </div>
-        <div class="grid3" id="home-stats"></div>
-        <div class="card">
-          <h2>How it works</h2>
-          <ol class="howto">
-            <li><div><b>Connect WhatsApp</b><br><span>Scan a QR once in Setup — the session is remembered.</span></div></li>
-            <li><div><b>Bring your AI key</b><br><span>Gemini, Claude, OpenAI, Grok, OpenRouter or a local model — free tiers work fine.</span></div></li>
-            <li><div><b>Teach it your style</b><br><span>Export any chat and upload it. The analyzer learns <i>your</i> messages only, even in group chats.</span></div></li>
-            <li><div><b>Set it per chat</b><br><span>Professional for the work group, slang for friends. Auto-reply, draft-only, or off.</span></div></li>
-          </ol>
+
+        <div class="home-stat-grid" id="home-stats"></div>
+
+        <div class="how-card">
+          <h2 class="how-title">How it works</h2>
+          <div class="how-list">
+            <div class="how-item">
+              <div class="how-num">1</div>
+              <div class="how-content">
+                <div class="how-item-title">Connect WhatsApp</div>
+                <div class="how-item-desc">Scan a QR once in Setup — the session is remembered.</div>
+              </div>
+            </div>
+            <div class="how-item">
+              <div class="how-num">2</div>
+              <div class="how-content">
+                <div class="how-item-title">Bring your AI key</div>
+                <div class="how-item-desc">Gemini, Claude, OpenAI, Grok, OpenRouter or a local model — free tiers work fine.</div>
+              </div>
+            </div>
+            <div class="how-item">
+              <div class="how-num">3</div>
+              <div class="how-content">
+                <div class="how-item-title">Teach it your style</div>
+                <div class="how-item-desc">Export any chat and upload it. The analyzer learns your messages only, even in group chats.</div>
+              </div>
+            </div>
+            <div class="how-item">
+              <div class="how-num">4</div>
+              <div class="how-content">
+                <div class="how-item-title">Set it per chat</div>
+                <div class="how-item-desc">Professional for the work group, slang for friends. Auto-reply, draft-only, or off.</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -184,15 +795,23 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
               <option value="off">off</option><option value="draft">draft</option><option value="auto">auto</option>
             </select>
             <button class="btn sm" id="bulk-apply-mode">Apply mode</button>
+            <select id="bulk-bluetick" title="Blue tick to apply">
+              <option value="">Blue tick: Inherit</option>
+              <option value="1">Blue tick: Always</option>
+              <option value="0">Blue tick: Ghost</option>
+            </select>
+            <button class="btn sm" id="bulk-apply-bluetick">Apply</button>
           </div>
           <p class="small muted">Click a chat to set its tone, mode and timing. Tick boxes to apply one style or mode to many chats at once.</p>
           <div id="chat-list"><p class="muted">Loading…</p></div>
         </div>
+
         <div class="card">
           <h2 style="margin:0 0 4px">My styles</h2>
           <p class="small muted">Styles you taught from chat exports. Deleting one resets its chats to Friendly.</p>
           <div id="style-lib"><p class="muted">Loading…</p></div>
         </div>
+
         <div class="card" style="margin-top:14px">
           <h2 style="margin:0 0 6px">Send a message</h2>
           <p class="small">Send a one-off message from your own WhatsApp number — handy when the agent can't do it for you. Doesn't change any chat's auto-reply mode.</p>
@@ -230,8 +849,8 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
                 <label class="f">Provider
                   <select id="s-prov"></select>
                 </label>
-                <label class="f">Model <span class="hint">pick a suggestion, load from the provider, or type any model id</span>
-                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-3.5-flash-lite">
+                <label class="f">Model <span class="hint">pick a suggestion, load from provider, or type model id</span>
+                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-2.5-flash">
                   <datalist id="s-models"></datalist>
                 </label>
               </div>
@@ -245,12 +864,14 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
                 </label>
               </div>
               <p class="hint" id="s-keyhint"></p>
-              <div class="row" style="margin-top:12px">
+              <div class="row" style="margin-top:14px">
                 <button class="btn" id="s-save-llm">Save</button>
                 <button class="btn ghost" id="s-load-models">Load models</button>
                 <button class="btn ghost" id="s-test-llm">Test connection</button>
+                <button class="btn ghost" id="s-clear-key" style="color:var(--red);border-color:#fecaca;background:var(--red-light)">Remove key</button>
                 <span id="s-llm-status" class="small muted"></span>
               </div>
+              <div id="s-llm-error" style="display:none;margin-top:10px"></div>
             </div>
           </div>
         </div>
@@ -259,12 +880,21 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
           <div class="step">
             <div class="n">3</div>
             <div style="flex:1">
-              <h2>Reply timing</h2>
-              <p>Each reply waits a <i>random</i> time inside this range and shows “typing…”, so nothing looks bot-timed.</p>
+              <h2>Reply timing & behavior</h2>
+              <p>Each reply waits a <i>random</i> time inside this range and pulses “typing…” realistically based on reply length, eliminating abrupt delays.</p>
               <div class="row">
                 <label class="f">Min (seconds)<input type="text" id="s-dmin" style="width:90px"></label>
                 <label class="f">Max (seconds)<input type="text" id="s-dmax" style="width:90px"></label>
-                <button class="btn" id="s-save-timing" style="align-self:flex-end">Save timing</button>
+                <button class="btn" id="s-save-timing" style="align-self:flex-end">Save settings</button>
+              </div>
+              <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle)">
+                <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer">
+                  <input type="checkbox" id="s-bluetick" style="margin-top:4px;accent-color:var(--accent);width:16px;height:16px">
+                  <div>
+                    <b>Send blue tick (read receipts)</b>
+                    <div class="small muted">When checked, marks incoming messages as read before replying. When unchecked, messages are read silently in ghost mode (sender keeps double gray ticks).</div>
+                  </div>
+                </label>
               </div>
             </div>
           </div>
@@ -283,7 +913,7 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
                 <span class="small muted">Built-in tones:</span>
                 <span id="s-tones" class="row" style="gap:6px"></span>
               </div>
-              <div class="row" style="margin-top:12px">
+              <div class="row" style="margin-top:14px">
                 <input type="file" id="s-file" accept=".txt,.zip">
                 <button class="btn" id="s-upload">Analyze &amp; save</button>
               </div>
@@ -308,6 +938,7 @@ code{background:#0c0f13;border:1px solid var(--border);border-radius:6px;padding
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
 <script>
 const $ = id => document.getElementById(id);
 const api = (p, o) => fetch(p, o).then(r => r.json());
@@ -334,29 +965,105 @@ document.querySelectorAll('.nav button').forEach(b => b.onclick = () => location
 
 /* ---------- status ---------- */
 let STATUS = null;
+let PREV_WA_READY = false;
 async function refreshStatus(){
   try {
     STATUS = await api('/api/status');
     const dot = $('side-dot'), txt = $('side-text');
-    if (STATUS.waReady) { dot.className = 'dot on'; txt.textContent = 'WhatsApp connected'; }
-    else if (STATUS.waError) { dot.className = 'dot off'; txt.textContent = 'WhatsApp error'; }
-    else { dot.className = 'dot warn'; txt.textContent = 'WhatsApp starting…'; }
+    if (STATUS.waReady) {
+      dot.className = 'dot on';
+      txt.textContent = 'WhatsApp connected';
+    } else if (STATUS.waStatus && STATUS.waStatus.startsWith('loading:')) {
+      dot.className = 'dot warn';
+      txt.textContent = 'WhatsApp ' + STATUS.waStatus.replace('loading:', 'loading ');
+    } else if (STATUS.waError) {
+      dot.className = 'dot off';
+      txt.textContent = 'WhatsApp error';
+    } else {
+      dot.className = 'dot warn';
+      txt.textContent = STATUS.waStatus === 'qr' ? 'Scan QR in Setup' : 'WhatsApp starting…';
+    }
     $('top-badges').innerHTML =
       `<span class="badge ${STATUS.waReady ? 'on' : 'off'}">WhatsApp ${STATUS.waReady ? 'on' : 'off'}</span>` +
-      `<span class="badge ${STATUS.llmReady ? 'on' : 'off'}">${STATUS.llmReady ? STATUS.llmLabel + ' · ' + STATUS.llmModel : 'AI not set'}</span>`;
+      `<span class="badge ${STATUS.llmReady ? 'on' : 'off'}">${STATUS.llmReady ? esc(STATUS.llmLabel) + ' · ' + esc(STATUS.llmModel) : 'AI not set'}</span>`;
     renderHomeStats();
     renderSetupQR();
+
+    // Auto-refresh chats when WhatsApp transitions to connected
+    if (STATUS.waReady && (!PREV_WA_READY || CHATS.length === 0)) {
+      const activeTab = (location.hash || '').replace('#/', '');
+      if (activeTab === 'chats' || CHATS.length === 0) {
+        loadChats();
+      }
+    }
+    PREV_WA_READY = STATUS.waReady;
   } catch(e) { /* server down */ }
 }
 
 function renderHomeStats(){
   if (!STATUS) return;
-  $('home-stats').innerHTML = [
-    ['WhatsApp', STATUS.waReady ? 'Connected' : (STATUS.waError ? 'Error' : 'Not connected'),
-      STATUS.waReady ? 'on' : (STATUS.waError ? 'off' : 'warn')],
-    ['AI provider', STATUS.llmReady ? `${STATUS.llmLabel}` : 'Not configured', STATUS.llmReady ? 'on' : 'warn'],
-    ['Browser', STATUS.browser ? STATUS.browser.name : 'will download', STATUS.browser ? 'on' : 'warn'],
-  ].map(([k,v,c]) => `<div class="stat"><div class="k">${k}</div><div class="v"><span class="badge ${c}">${v}</span></div></div>`).join('');
+
+  // WhatsApp status mapping
+  let waLabel = 'Not connected', waPillClass = 'pill-amber';
+  if (STATUS.waReady) {
+    waLabel = 'Connected (Saved)';
+    waPillClass = 'pill-green';
+  } else if (STATUS.waError) {
+    waLabel = 'Error';
+    waPillClass = 'pill-red';
+  } else if (STATUS.waStatus && STATUS.waStatus.startsWith('loading:')) {
+    waLabel = 'Loading…';
+    waPillClass = 'pill-amber';
+  } else if (STATUS.waStatus === 'qr') {
+    waLabel = 'Scan QR';
+    waPillClass = 'pill-amber';
+  }
+
+  // LLM status mapping
+  let llmLabel = 'Not configured', llmPillClass = 'pill-amber';
+  if (STATUS.llmReady) {
+    llmLabel = STATUS.llmLabel || 'Active';
+    llmPillClass = 'pill-blue';
+  }
+
+  // Browser status mapping
+  let browserLabel = (STATUS.browser && STATUS.browser.name) ? STATUS.browser.name : 'Chrome';
+  let browserPillClass = 'pill-purple';
+
+  const chevronSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+
+  const waSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/><path fill="#fff" d="M17.52 14.33c-.22-.11-1.3-.64-1.5-.71-.2-.07-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.17-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.21-.69-1.66-.18-.43-.37-.37-.5-.38l-.43-.01c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.86s.8 2.15.91 2.3c.11.15 1.57 2.4 3.81 3.36.53.23.95.37 1.27.47.53.17 1.02.15 1.4.09.43-.06 1.3-.53 1.48-1.04.19-.51.19-.95.13-1.04-.06-.1-.2-.16-.42-.27z"/></svg>`;
+
+  const aiSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#2563eb"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>`;
+
+  const chromeSvg = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#EA4335" d="M12 2C7.2 2 3.1 5.4 2.2 10l5.8 3.3c.6-2.5 2.9-4.3 5.6-4.3h8.3C20.3 5.9 16.5 2 12 2z"/><path fill="#4285F4" d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z"/><path fill="#FBBC05" d="M21.9 10H13.6c-.6 0-1.1.2-1.6.6l-5.8 10c1.8.9 3.8 1.4 5.8 1.4 5.5 0 10-4.5 10-10 0-.7-.1-1.3-.1-2z"/><path fill="#34A853" d="M2.2 10C2.1 10.6 2 11.3 2 12c0 5 3.7 9.1 8.5 9.9l4.2-7.2c-1.3 1.3-3.2 1.8-5.1.9L2.2 10z"/></svg>`;
+
+  $('home-stats').innerHTML = `
+    <a class="stat-card" href="#/setup">
+      <div class="stat-icon-wrap">${waSvg}</div>
+      <div class="stat-body">
+        <div class="stat-label">WHATSAPP</div>
+        <div class="stat-pill ${waPillClass}">${esc(waLabel)}</div>
+      </div>
+      <div class="stat-chevron">${chevronSvg}</div>
+    </a>
+    <a class="stat-card" href="#/setup">
+      <div class="stat-icon-wrap">${aiSvg}</div>
+      <div class="stat-body">
+        <div class="stat-label">AI PROVIDER</div>
+        <div class="stat-pill ${llmPillClass}">${esc(llmLabel)}</div>
+      </div>
+      <div class="stat-chevron">${chevronSvg}</div>
+    </a>
+    <a class="stat-card" href="#/setup">
+      <div class="stat-icon-wrap">${chromeSvg}</div>
+      <div class="stat-body">
+        <div class="stat-label">BROWSER</div>
+        <div class="stat-pill ${browserPillClass}">${esc(browserLabel)}</div>
+      </div>
+      <div class="stat-chevron">${chevronSvg}</div>
+    </a>
+  `;
 }
 
 /* ---------- chats ---------- */
@@ -410,12 +1117,28 @@ async function loadChats(){
     const chats = data.chats || [];
     CHATS = chats || [];
     populateSendPicker();
-    if (!chats.length) { box.innerHTML = '<p class="muted">No chats yet — connect WhatsApp in Setup first.</p>'; return; }
-    box.innerHTML = chats.map(c => `
+    if (!chats.length) {
+      if (STATUS && !STATUS.waReady) {
+        box.innerHTML = '<p class="muted">WhatsApp is still connecting… Chats will load once connected.</p>';
+      } else {
+        box.innerHTML = '<p class="muted">No chats found. If you just paired WhatsApp, click Refresh in a moment.</p>';
+      }
+      return;
+    }
+    box.innerHTML = chats.map(c => {
+      const timeStr = c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
+      return `
       <div class="chatitem" data-id="${esc(c.id)}" data-group="${c.isGroup ? 1 : 0}">
         <div class="chathead">
           <input type="checkbox" data-check="${esc(c.id)}">
-          <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
+              ${timeStr ? `<span class="small muted" style="flex:none;font-size:11.5px">${timeStr}</span>` : ''}
+            </div>
+            ${c.lastMsg ? `<div class="small muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;font-size:12.5px">${esc(c.lastMsg)}</div>` : ''}
+          </div>
+          ${c.unreadCount ? `<span class="badge on" style="font-size:11px;padding:2px 7px">${c.unreadCount}</span>` : ''}
           <span class="badge">${esc(c.config.styleName || '')}</span>
           <span class="badge ${c.config.mode === 'auto' ? 'on' : c.config.mode === 'draft' ? 'warn' : ''}">${c.config.mode}</span>
         </div>
@@ -429,19 +1152,61 @@ async function loadChats(){
               <select id="s-${esc(c.id)}">${styleOptions(c.config.styleId)}</select>
             </label>
           </div>
-          <div class="row">
-            <label class="f">Delay min (s)<input type="text" id="d1-${esc(c.id)}" style="width:80px" placeholder="global" value="${c.config.replyDelayMin ?? ''}"></label>
-            <label class="f">Delay max (s)<input type="text" id="d2-${esc(c.id)}" style="width:80px" placeholder="global" value="${c.config.replyDelayMax ?? ''}"></label>
+          <div class="row" style="flex-wrap:wrap;gap:10px">
+            <label class="f">Delay min (s)<input type="text" id="d1-${esc(c.id)}" style="width:75px" placeholder="global" value="${c.config.replyDelayMin ?? ''}"></label>
+            <label class="f">Delay max (s)<input type="text" id="d2-${esc(c.id)}" style="width:75px" placeholder="global" value="${c.config.replyDelayMax ?? ''}"></label>
+            <label class="f">Blue tick
+              <select id="bt-${esc(c.id)}" style="width:130px">
+                <option value="" ${c.config.sendBlueTick === null || c.config.sendBlueTick === undefined ? 'selected' : ''}>Inherit global</option>
+                <option value="1" ${c.config.sendBlueTick === true ? 'selected' : ''}>Always blue</option>
+                <option value="0" ${c.config.sendBlueTick === false ? 'selected' : ''}>Ghost (gray)</option>
+              </select>
+            </label>
             <button class="btn sm" data-save="${esc(c.id)}" style="align-self:flex-end">Save</button>
+            <button class="btn ghost sm" type="button" data-toggle-msgs="${esc(c.id)}" style="align-self:flex-end">Conversation</button>
+          </div>
+          <div id="msgs-box-${esc(c.id)}" class="msgs-box-container" style="display:none">
+            <p class="small muted" style="margin:0">Loading conversation…</p>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
     box.querySelectorAll('.chathead').forEach(h => h.addEventListener('click', e => {
       if (e.target.type === 'checkbox') return;
       h.parentElement.classList.toggle('open');
     }));
     box.querySelectorAll('[data-save]').forEach(b => b.onclick = e => { e.stopPropagation(); saveChat(b.dataset.save); });
     box.querySelectorAll('[data-check]').forEach(cb => cb.onchange = updateSelCount);
+    box.querySelectorAll('[data-toggle-msgs]').forEach(b => b.onclick = async e => {
+      e.stopPropagation();
+      const id = b.dataset.toggleMsgs;
+      const msgBox = document.getElementById('msgs-box-' + id);
+      if (!msgBox) return;
+      if (msgBox.style.display === 'block') {
+        msgBox.style.display = 'none';
+        b.textContent = 'Conversation';
+        return;
+      }
+      msgBox.style.display = 'block';
+      b.textContent = 'Hide conversation';
+      msgBox.innerHTML = '<p class="small muted" style="margin:0">Loading conversation…</p>';
+      try {
+        const r = await api('/api/chats/' + encodeURIComponent(id) + '/messages');
+        const msgs = r.messages || [];
+        if (!msgs.length) {
+          msgBox.innerHTML = '<p class="small muted" style="margin:0">No messages available yet.</p>';
+          return;
+        }
+        msgBox.innerHTML = msgs.map(m => `
+          <div class="msg-bubble ${m.fromMe ? 'me' : 'them'}">
+            <div>${esc(m.body || '[Media]')}</div>
+            <div class="msg-time">${m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : ''}</div>
+          </div>`).join('');
+        msgBox.scrollTop = msgBox.scrollHeight;
+      } catch (err) {
+        msgBox.innerHTML = '<p class="small muted" style="margin:0">Could not load messages.</p>';
+      }
+    });
     if (PENDING_BANNER) {
       const b = $('chats-banner');
       b.style.display = 'block';
@@ -449,7 +1214,9 @@ async function loadChats(){
       $('bulk-style').value = PENDING_BANNER_STYLE || 'preset:friendly';
       PENDING_BANNER = null;
     }
-  } catch(e){ box.innerHTML = '<p class="muted">Could not load chats.</p>'; }
+  } catch(e){
+    box.innerHTML = `<p class="muted">Could not load chats.</p><button class="btn ghost sm" onclick="loadChats()">Retry</button>`;
+  }
 }
 
 let PENDING_BANNER_STYLE = null;
@@ -489,13 +1256,25 @@ $('bulk-apply-mode').onclick = async () => {
   toast(`Mode set on ${r.updated} chats`);
   loadChats();
 };
+$('bulk-apply-bluetick').onclick = async () => {
+  const ids = selectedIds();
+  if (!ids.length) return toast('Tick some chats first');
+  const v = $('bulk-bluetick').value;
+  const sendBlueTick = v === '1' ? true : (v === '0' ? false : null);
+  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chatIds: ids, sendBlueTick }) });
+  toast(`Blue tick updated for ${r.updated} chats`);
+  loadChats();
+};
 
 function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 async function saveChat(id){
   const v = x => document.getElementById(x + '-' + id).value;
+  const bt = v('bt');
+  const sendBlueTick = bt === '1' ? true : (bt === '0' ? false : null);
   await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ chatId: id, mode: v('m'), styleId: v('s'),
-      replyDelayMin: v('d1'), replyDelayMax: v('d2') }) });
+      replyDelayMin: v('d1'), replyDelayMax: v('d2'), sendBlueTick }) });
   toast('Saved');
   loadChats();
 }
@@ -523,33 +1302,74 @@ $('send-btn').onclick = async () => {
 
 /* ---------- setup ---------- */
 let PROVIDERS = {};
+let LAST_SETTINGS = {};
+
 async function loadProviders(){
-  if (Object.keys(PROVIDERS).length) return renderProviderFields();
-  PROVIDERS = await api('/api/providers');
-  $('s-prov').innerHTML = Object.entries(PROVIDERS).map(([k,p]) => `<option value="${k}">${p.label}</option>`).join('');
-  $('s-prov').onchange = renderProviderFields;
+  if (!Object.keys(PROVIDERS).length) {
+    PROVIDERS = await api('/api/providers');
+    $('s-prov').innerHTML = Object.entries(PROVIDERS).map(([k,p]) => `<option value="${k}">${p.label}</option>`).join('');
+    $('s-prov').onchange = () => {
+      const k = $('s-prov').value, p = PROVIDERS[k];
+      if (p) {
+        const rememberedModel = LAST_SETTINGS.providerModels?.[k];
+        $('s-model').value = rememberedModel || p.models[0] || '';
+      }
+      renderProviderFields();
+    };
+  }
   renderProviderFields();
 }
+
 function renderProviderFields(){
   const k = $('s-prov').value, p = PROVIDERS[k];
   if (!p) return;
-  $('s-models').innerHTML = p.models.map(m => `<option value="${m}">`).join('');
-  if (!$( 's-model').value && p.models[0]) $('s-model').value = p.models[0];
+  $('s-models').innerHTML = (p.models || []).map(m => `<option value="${m}">`).join('');
+  if (!$('s-model').value && p.models && p.models[0]) $('s-model').value = p.models[0];
   $('s-key-wrap').style.display = p.needsKey ? '' : 'none';
   $('s-url-wrap').style.display = (k === 'custom' || k === 'ollama' || k === 'lmstudio') ? '' : 'none';
-  $('s-baseurl').value = p.baseURL || '';
-  $('s-baseurl').readOnly = k !== 'custom';
+  if (k !== 'custom') {
+    $('s-baseurl').value = p.baseURL || '';
+    $('s-baseurl').readOnly = true;
+  } else {
+    $('s-baseurl').readOnly = false;
+  }
   $('s-keyhint').innerHTML = (p.keyHint || '') + (p.keyUrl ? ` — <a href="${p.keyUrl}" target="_blank" rel="noopener">get a key</a>` : '');
+
+  const savedKey = LAST_SETTINGS.providerKeys?.[k] || (LAST_SETTINGS.llmProvider === k ? LAST_SETTINGS.llmApiKey : '');
+  if (savedKey) {
+    $('s-llm-status').textContent = `Key saved for ${p.label} (${savedKey})`;
+  } else if (!p.needsKey) {
+    $('s-llm-status').textContent = 'No key needed for ' + p.label;
+  } else {
+    $('s-llm-status').textContent = 'No key saved yet for ' + p.label;
+  }
 }
+
 async function loadSetupState(){
-  const s = await api('/api/settings');
-  if (PROVIDERS[s.llmProvider]) $('s-prov').value = s.llmProvider;
+  LAST_SETTINGS = await api('/api/settings');
+  if (PROVIDERS[LAST_SETTINGS.llmProvider]) $('s-prov').value = LAST_SETTINGS.llmProvider;
   renderProviderFields();
-  if (s.llmModel) $('s-model').value = s.llmModel;
-  if (s.llmBaseURL) $('s-baseurl').value = s.llmBaseURL;
-  $('s-dmin').value = s.replyDelayMin; $('s-dmax').value = s.replyDelayMax;
-  $('s-llm-status').textContent = s.llmApiKey ? `Key saved (${s.llmApiKey})` : 'No key saved yet';
-  markStep('step-llm', !!s.llmApiKey || !PROVIDERS[s.llmProvider]?.needsKey);
+  if (LAST_SETTINGS.llmModel) $('s-model').value = LAST_SETTINGS.llmModel;
+  if (LAST_SETTINGS.llmBaseURL) $('s-baseurl').value = LAST_SETTINGS.llmBaseURL;
+  $('s-dmin').value = LAST_SETTINGS.replyDelayMin ?? 8;
+  $('s-dmax').value = LAST_SETTINGS.replyDelayMax ?? 25;
+  if ($('s-bluetick')) $('s-bluetick').checked = Boolean(LAST_SETTINGS.sendBlueTick);
+  const curProv = $('s-prov').value;
+  const curKey = LAST_SETTINGS.providerKeys?.[curProv] || (LAST_SETTINGS.llmProvider === curProv ? LAST_SETTINGS.llmApiKey : '');
+  $('s-llm-status').textContent = curKey ? `Key saved (${curKey})` : (PROVIDERS[curProv]?.needsKey ? 'No key saved yet' : 'No key needed');
+
+  const errBox = $('s-llm-error');
+  if (errBox) {
+    if (STATUS && STATUS.lastLlmError) {
+      errBox.style.display = 'block';
+      errBox.className = 'err';
+      errBox.innerHTML = `<b>Recent AI Generation Error (${esc(STATUS.lastLlmError.provider || '')}):</b><br><code>${esc(STATUS.lastLlmError.message || '')}</code>`;
+    } else {
+      errBox.style.display = 'none';
+    }
+  }
+
+  markStep('step-llm', !!curKey || !PROVIDERS[curProv]?.needsKey);
   markStep('step-wa', !!(STATUS && STATUS.waReady));
 }
 function markStep(id, done){ $(id).classList.toggle('done', !!done); }
@@ -558,14 +1378,62 @@ async function renderSetupQR(){
   const box = $('s-qr');
   if (!box || !$('view-setup').classList.contains('active')) return;
   if (!STATUS) return;
-  if (STATUS.waReady) { box.innerHTML = '<span class="badge on">Connected</span>'; markStep('step-wa', true); return; }
+
+  function bindResetBtn() {
+    const rstBtn = $('btn-wa-reset');
+    if (rstBtn) {
+      rstBtn.onclick = async () => {
+        if (!confirm('Reset WhatsApp connection? This will terminate the browser, wipe locks/session, and generate a fresh QR code.')) return;
+        rstBtn.disabled = true;
+        rstBtn.textContent = 'Resetting…';
+        await api('/api/wa-reset', { method: 'POST' });
+        toast('Connection reset. Initializing fresh session…');
+        refreshStatus();
+      };
+    }
+  }
+
+  if (STATUS.waReady) {
+    const userPhone = STATUS.waInfo?.wid?.user ? `+${STATUS.waInfo.wid.user}` : '';
+    const userName = STATUS.waInfo?.pushname || '';
+    const who = [userName, userPhone ? `(${userPhone})` : ''].filter(Boolean).join(' ');
+    box.innerHTML = `
+      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
+        <span class="badge on">Connected</span>
+        <span class="badge on">Session Saved</span>
+      </div>
+      <p class="small muted" style="margin:4px 0 10px">
+        Logged in as <b>${esc(who || 'WhatsApp User')}</b>. Your session is permanently saved locally in <code>.wwebjs_auth</code>. You do <b>not</b> need to scan the QR code again when restarting the app.
+      </p>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost sm" id="btn-wa-logout" style="font-size:12px">Log out / Switch account</button>
+        <button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button>
+      </div>`;
+    const btn = $('btn-wa-logout');
+    if (btn) {
+      btn.onclick = async () => {
+        if (!confirm('Log out from WhatsApp? This will clear the saved session and require scanning the QR code again.')) return;
+        btn.disabled = true;
+        btn.textContent = 'Logging out…';
+        await api('/api/wa-logout', { method: 'POST' });
+        toast('Logged out. Re-initializing…');
+        refreshStatus();
+      };
+    }
+    bindResetBtn();
+    markStep('step-wa', true);
+    return;
+  }
   if (STATUS.qrAvailable) {
     if (!box.dataset.qr) {
       const q = await api('/api/qr');
       if (q.qrImage) {
         box.dataset.qr = '1';
         box.innerHTML = `<div class="qrwrap"><img src="${q.qrImage}" width="240" height="240" alt="WhatsApp QR">
-          <div><p class="small">Scan with WhatsApp → Settings → Linked devices → <b>Link a device</b>.<br>The code refreshes automatically — this page polls for it.</p></div></div>`;
+          <div><p class="small">Scan with WhatsApp → Settings → Linked devices → <b>Link a device</b>.<br>The code refreshes automatically — this page polls for it.</p>
+          <div style="margin-top:12px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>
+          </div></div>`;
+        bindResetBtn();
       }
     }
     return;
@@ -573,33 +1441,83 @@ async function renderSetupQR(){
   delete box.dataset.qr;
   if (STATUS.waError) {
     box.innerHTML = `<div class="err"><b>Couldn’t start WhatsApp:</b><br><code>${esc(STATUS.waError)}</code></div>
-      <p class="hint">Common fixes: install a browser (Chrome/Edge/Brave), delete the <code>.wwebjs_auth</code> folder and restart, or wait 2–3 minutes on first run. Check the terminal for the full log.</p>`;
+      <p class="hint">Common fixes: click <b>Reset connection</b> below to wipe any corrupted locks, or wait 1–2 minutes on first run. Check terminal for full log.</p>
+      <div style="margin-top:12px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>`;
+    bindResetBtn();
   } else {
-    box.innerHTML = '<p class="muted">Starting… this takes 10–30 seconds on first run.</p>';
+    box.innerHTML = `<p class="muted">Starting… this takes 10–30 seconds on first run.</p>
+      <div style="margin-top:10px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>`;
+    bindResetBtn();
   }
 }
 
 $('s-save-llm').onclick = async () => {
-  const body = { llmProvider: $('s-prov').value, llmModel: $('s-model').value.trim(), llmBaseURL: $('s-baseurl').value.trim() };
+  const prov = $('s-prov').value;
+  const body = {
+    llmProvider: prov,
+    llmModel: $('s-model').value.trim(),
+    llmBaseURL: $('s-baseurl').value.trim()
+  };
   const key = $('s-key').value.trim();
   if (key) body.llmApiKey = key;
-  const r = await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const r = await api('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  LAST_SETTINGS = r.settings;
   $('s-key').value = '';
-  $('s-llm-status').textContent = r.settings.llmApiKey ? `Key saved (${r.settings.llmApiKey})` : 'Saved (no key)';
+  const savedKey = LAST_SETTINGS.providerKeys?.[prov] || LAST_SETTINGS.llmApiKey;
+  $('s-llm-status').textContent = savedKey ? `Key saved (${savedKey})` : 'Saved (no key)';
+  markStep('step-llm', !!savedKey || !PROVIDERS[prov]?.needsKey);
   toast('AI settings saved');
   refreshStatus();
 };
+
+$('s-clear-key').onclick = async () => {
+  const prov = $('s-prov').value;
+  const pLabel = PROVIDERS[prov]?.label || prov;
+  if (!confirm(`Remove saved API key for ${pLabel}?`)) return;
+  await api('/api/settings/clear-key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: prov })
+  });
+  $('s-key').value = '';
+  toast(`API key removed for ${pLabel}`);
+  await loadSetupState();
+  refreshStatus();
+};
+
 $('s-test-llm').onclick = async () => {
   $('s-llm-status').textContent = 'Testing…';
-  const r = await fetch('/api/llm-test', { method:'POST' }).then(r => r.json());
+  const body = {
+    provider: $('s-prov').value,
+    apiKey: $('s-key').value.trim(),
+    baseURL: $('s-baseurl').value.trim(),
+    model: $('s-model').value.trim()
+  };
+  const r = await fetch('/api/llm-test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(r => r.json());
   $('s-llm-status').innerHTML = r.ok
     ? `<span class="badge on">works</span> <span class="muted">${esc(r.provider)} · ${esc(r.model)} replied: “${esc(r.reply)}”</span>`
     : `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
 };
+
 $('s-load-models').onclick = async () => {
   $('s-llm-status').textContent = 'Loading models…';
-  const r = await api('/api/llm-models', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ provider: $('s-prov').value, apiKey: $('s-key').value, baseURL: $('s-baseurl').value }) });
+  const r = await api('/api/llm-models', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: $('s-prov').value,
+      apiKey: $('s-key').value.trim(),
+      baseURL: $('s-baseurl').value.trim()
+    })
+  });
   if (!r.ok) {
     $('s-llm-status').innerHTML = `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
     return;
@@ -620,6 +1538,7 @@ $('s-load-models').onclick = async () => {
   });
   $('s-llm-status').innerHTML = `<span class="badge on">done</span> <span class="muted">${models.length} models — click one to use it.</span>`;
 };
+
 async function renderTones(){
   try {
     const r = await api('/api/styles');
@@ -628,11 +1547,20 @@ async function renderTones(){
       `<span class="tone-chip">${esc(labels[k] || k)}</span>`).join('');
   } catch(e) { /* ignore */ }
 }
+
 $('s-save-timing').onclick = async () => {
-  await api('/api/settings', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ replyDelayMin: $('s-dmin').value, replyDelayMax: $('s-dmax').value }) });
-  toast('Timing saved');
+  await api('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      replyDelayMin: $('s-dmin').value,
+      replyDelayMax: $('s-dmax').value,
+      sendBlueTick: $('s-bluetick').checked
+    })
+  });
+  toast('Timing & behavior saved');
 };
+
 $('s-upload').onclick = async () => {
   const f = $('s-file').files[0];
   if (!f) return toast('Choose a chat export file first');
