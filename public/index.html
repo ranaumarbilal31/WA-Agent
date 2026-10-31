@@ -2,1589 +2,2457 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WA-Agent</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>WhatsApp Web · Agent</title>
 <style>
 :root {
-  --bg: #f8fafc;
-  --side: #ffffff;
-  --card: #ffffff;
-  --card2: #f8fafc;
-  --border: #e2e8f0;
-  --border-subtle: #edf2f7;
-  --text: #0f172a;
-  --muted: #64748b;
-  --faint: #94a3b8;
-  --accent: #2563eb;
-  --accent-d: #1d4ed8;
-  --accent-light: #eff6ff;
-  --green: #10b981;
-  --green-light: #eafaf1;
-  --red: #ef4444;
-  --red-light: #fee2e2;
-  --amber: #f59e0b;
-  --amber-light: #fef3c7;
-  --purple: #7c3aed;
-  --purple-light: #f3e8ff;
-  --radius: 18px;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  --shadow-hover: 0 14px 35px -5px rgba(0, 0, 0, 0.06), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
-  --shadow-btn-blue: 0 10px 24px -4px rgba(37, 99, 235, 0.38);
+  --wa-green: #00a884;
+  --wa-green-dark: #008069;
+  --wa-teal: #128c7e;
+  --wa-bg: #eae6df;
+  --wa-header-bg: #f0f2f5;
+  --wa-panel-bg: #ffffff;
+  --wa-bubble-me: #d9fdd3;
+  --wa-bubble-them: #ffffff;
+  --wa-border: #e9edef;
+  --wa-border-subtle: #f0f2f5;
+  --wa-text-primary: #111b21;
+  --wa-text-secondary: #667781;
+  --wa-text-muted: #8696a0;
+  --wa-badge-green: #25d366;
+  --wa-blue-tick: #53bdeb;
+  --wa-gray-tick: #8696a0;
+  --accent-blue: #027eb5;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 0.5px rgba(11,20,26,.13);
+  --shadow-md: 0 4px 16px rgba(11,20,26,.15);
+  --shadow-drawer: -4px 0 20px rgba(0,0,0,0.08);
 }
+
 * { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
+html, body {
+  height: 100%;
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  font-size: 15px;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--wa-text-primary);
+  background: #d1d7db;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
-.app { display: flex; min-height: 100vh; }
 
-/* Sidebar */
-.sidebar {
-  width: 240px;
-  background: var(--side);
-  border-right: 1px solid var(--border);
+/* Background Top Green Stripe */
+.wa-app-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 127px;
+  background: var(--wa-green-dark);
+  z-index: 1;
+}
+
+/* Main App Shell Container */
+.wa-app-window {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--wa-panel-bg);
+  z-index: 2;
+  overflow: hidden;
+}
+
+@media (min-width: 1441px) {
+  .wa-app-window {
+    top: 19px;
+    bottom: 19px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1600px;
+    max-width: calc(100vw - 38px);
+    box-shadow: 0 6px 18px rgba(11,20,26,.08);
+    border-radius: 4px;
+  }
+}
+
+/* ---------- LEFT PANEL: CHATS LIST ---------- */
+.wa-left-pane {
+  width: 400px;
+  min-width: 340px;
+  max-width: 460px;
+  background: var(--wa-panel-bg);
+  border-right: 1px solid var(--wa-border);
   display: flex;
   flex-direction: column;
-  padding: 20px 14px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  height: 100%;
+  position: relative;
   flex: none;
 }
-.brand {
+
+.wa-pane-header {
+  height: 60px;
+  background: var(--wa-header-bg);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 10px 22px;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--wa-border-subtle);
+  flex: none;
 }
-.brand .mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #25D366, #2563eb);
-  color: #fff;
+
+.wa-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #dfe5e7;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.28);
+  font-weight: 700;
+  color: #54656f;
+  font-size: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  flex: none;
 }
-.brand .name { font-weight: 700; font-size: 16px; color: var(--text); }
-.brand .sub { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+.wa-status-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--wa-text-muted);
+}
+.wa-status-dot.online { background: #25d366; }
+.wa-status-dot.warn { background: #f59e0b; }
+.wa-status-dot.error { background: #ef4444; }
 
-.nav { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
-.nav button {
+.wa-header-icons {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
+}
+
+.wa-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: none;
-  border: 0;
-  color: var(--muted);
-  padding: 11px 14px;
-  border-radius: 12px;
+  border: none;
+  color: #54656f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  position: relative;
+}
+.wa-icon-btn:hover {
+  background: rgba(11,20,26,.06);
+  color: var(--wa-text-primary);
+}
+.wa-icon-btn svg { width: 19px; height: 19px; stroke: currentColor; fill: none; }
+
+.wa-icon-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 12px;
+  border: 1.5px solid #fff;
+  display: none;
+}
+
+/* Search & Filters */
+.wa-search-bar-wrap {
+  padding: 8px 12px;
+  background: var(--wa-panel-bg);
+  border-bottom: 1px solid var(--wa-border-subtle);
+}
+.wa-search-box {
+  background: var(--wa-header-bg);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  gap: 10px;
+}
+.wa-search-box svg { width: 16px; height: 16px; color: var(--wa-text-secondary); flex: none; }
+.wa-search-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  outline: none;
   font-size: 14px;
+  color: var(--wa-text-primary);
+}
+.wa-search-box input::placeholder { color: var(--wa-text-muted); }
+
+.wa-filter-chips {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px 10px;
+  background: var(--wa-panel-bg);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--wa-border);
+}
+.wa-chip {
+  background: var(--wa-header-bg);
+  border: 1px solid transparent;
+  color: var(--wa-text-secondary);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  text-align: left;
-  width: 100%;
-  transition: all .15s ease;
+  white-space: nowrap;
+  transition: all 0.15s;
 }
-.nav button svg { width: 19px; height: 19px; flex: none; stroke: currentColor; }
-.nav button:hover { background: #f8fafc; color: var(--text); }
-.nav button.active {
-  background: var(--accent-light);
-  color: var(--accent);
+.wa-chip:hover { background: #e9edef; }
+.wa-chip.active {
+  background: #e7fce3;
+  color: var(--wa-green-dark);
   font-weight: 600;
+  border-color: #bbf7d0;
 }
-.nav button.active svg { stroke: var(--accent); }
 
-.side-foot {
-  margin-top: auto;
-  padding: 14px 10px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 12.5px;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  gap: 9px;
+/* Chat list */
+.wa-chat-list {
+  flex: 1;
+  overflow-y: auto;
 }
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--faint);
-  flex: none;
-  transition: background .2s ease;
-}
-.dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
-.dot.off { background: var(--red); box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
-.dot.warn { background: var(--amber); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
-
-/* Main layout */
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.topbar {
+.wa-chat-item {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 18px 32px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  z-index: 20;
-}
-.topbar h1 { font-size: 20px; margin: 0; font-weight: 700; color: var(--text); }
-.topbar .spacer { flex: 1; }
-.content { padding: 30px 32px 50px; max-width: 980px; width: 100%; margin: 0 auto; }
-.view { display: none; }
-.view.active { display: block; animation: fade .18s ease; }
-@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-
-/* Cards & Containers */
-.card {
-  background: var(--card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  padding: 26px 28px;
-  margin: 0 0 22px;
-}
-.card h2 { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text); }
-.card h3 { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: #1e293b; }
-.card p { margin: 8px 0; color: var(--muted); line-height: 1.6; }
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
-
-@media(max-width: 860px) {
-  .grid2, .grid3 { grid-template-columns: 1fr; }
-  .sidebar { width: 68px; padding: 18px 10px; }
-  .sidebar .lbl, .brand .txt { display: none; }
-  .content { padding: 20px 16px; }
-  .topbar { padding: 14px 18px; }
-}
-
-/* Hero Section (Mockup Match) */
-.hero-wrap {
-  padding: 10px 0 28px 0;
-}
-.hero-badge-icon {
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-.hero-title {
-  margin: 0 0 12px 0;
-  font-size: 34px;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-.hero-desc {
-  margin: 0 0 24px 0;
-  color: #64748b;
-  font-size: 15px;
-  line-height: 1.6;
-  max-width: 620px;
-}
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.btn-hero-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #2563eb;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 14.5px;
-  padding: 11px 24px;
-  border-radius: 9999px;
-  text-decoration: none;
-  box-shadow: var(--shadow-btn-blue);
-  transition: all 0.18s ease;
-  border: none;
+  padding: 10px 16px;
   cursor: pointer;
+  border-bottom: 1px solid var(--wa-border-subtle);
+  transition: background 0.15s;
+  position: relative;
 }
-.btn-hero-primary:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.48);
-}
-.btn-hero-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: #ffffff;
-  color: #1e293b;
-  font-weight: 600;
-  font-size: 14.5px;
-  padding: 11px 22px;
-  border-radius: 9999px;
-  text-decoration: none;
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-  transition: all 0.18s ease;
-  cursor: pointer;
-}
-.btn-hero-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
-  transform: translateY(-1px);
-}
+.wa-chat-item:hover { background: #f5f6f6; }
+.wa-chat-item.active { background: #f0f2f5; }
 
-/* Stat Cards (Mockup Match) */
-.home-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  box-shadow: var(--shadow-card);
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  cursor: pointer;
-}
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-hover);
-  border-color: var(--border);
-}
-.stat-icon-wrap {
+.wa-chat-avatar {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #f8fafc;
-  border: 1px solid var(--border-subtle);
+  background: #e2e8f0;
+  color: #475569;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
   flex: none;
+  overflow: hidden;
 }
-.stat-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.wa-chat-info {
+  flex: 1;
   min-width: 0;
-}
-.stat-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--faint);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.stat-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 14px;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 600;
-  width: fit-content;
-}
-.stat-pill.pill-green { background: var(--green-light); color: #16a34a; }
-.stat-pill.pill-blue { background: var(--accent-light); color: var(--accent); }
-.stat-pill.pill-purple { background: var(--purple-light); color: var(--purple); }
-.stat-pill.pill-amber { background: var(--amber-light); color: #d97706; }
-.stat-pill.pill-red { background: var(--red-light); color: var(--red); }
-.stat-chevron {
-  margin-left: auto;
-  color: #cbd5e1;
-  display: flex;
-  align-items: center;
-  flex: none;
-}
-
-/* How It Works Card (Mockup Match) */
-.how-card {
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  box-shadow: var(--shadow-card);
-  padding: 34px 38px;
-  margin-bottom: 24px;
-}
-.how-title {
-  margin: 0 0 26px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-.how-list {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 3px;
 }
-.how-item {
+.wa-chat-title-row {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: baseline;
 }
-.how-num {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.wa-chat-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wa-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wa-chat-time {
+  font-size: 11.5px;
+  color: var(--wa-text-muted);
   flex: none;
 }
-.how-content {
+.wa-chat-snippet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wa-chat-snippet {
+  font-size: 13px;
+  color: var(--wa-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
 }
-.how-item-title {
-  font-weight: 600;
-  font-size: 15px;
-  color: #0f172a;
-  margin-bottom: 3px;
-}
-.how-item-desc {
-  font-size: 13.5px;
-  color: #64748b;
-  line-height: 1.55;
+.wa-chat-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
 }
 
-/* Global Badges */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: #f1f5f9;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-.badge.on {
-  color: #15803d;
-  border-color: #bbf7d0;
-  background: #dcfce7;
-}
-.badge.off {
-  color: #b91c1c;
-  border-color: #fecaca;
-  background: #fee2e2;
-}
-.badge.warn {
-  color: #b45309;
-  border-color: #fde68a;
-  background: #fef3c7;
-}
-
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--accent);
-  color: #ffffff;
-  border: 0;
+/* Badges */
+.badge-mode {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
   border-radius: 10px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.22);
-  transition: all .15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
-.btn:hover { background: var(--accent-d); }
-.btn.ghost {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  color: #334155;
-  box-shadow: var(--shadow-sm);
-}
-.btn.ghost:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: var(--text);
-}
-.btn.sm { padding: 7px 13px; font-size: 13px; }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.badge-mode.auto { background: #dcfce7; color: #15803d; }
+.badge-mode.draft { background: #fef3c7; color: #b45309; }
+.badge-mode.off { background: #f1f5f9; color: #94a3b8; }
 
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-label.f {
+.badge-goal {
+  font-size: 11px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.badge-unread {
+  background: var(--wa-badge-green);
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ---------- CENTER PANEL: CONVERSATION VIEW ---------- */
+.wa-center-pane {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #475569;
-  min-width: 0;
-}
-input[type=text], input[type=password], select, textarea {
-  width: 100%;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: var(--text);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 14px;
-  transition: border-color .15s, box-shadow .15s;
-}
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-input[type=file] { color: var(--muted); font-size: 13px; }
-.hint { font-size: 12.5px; color: var(--faint); line-height: 1.5; }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-code {
-  background: #f1f5f9;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 7px;
-  font-size: 12.5px;
-  color: #1e293b;
-  word-break: break-all;
+  height: 100%;
+  position: relative;
+  background: var(--wa-bg);
 }
 
-/* Steps in Setup */
-.step { display: flex; gap: 18px; align-items: flex-start; }
-.step .n {
+/* Empty placeholder screen */
+.wa-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 30px;
+  background: #f0f2f5;
+  border-bottom: 6px solid var(--wa-green);
+}
+.wa-empty-icon {
+  width: 90px;
+  height: 90px;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.wa-empty-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: #41525d;
+  margin: 0 0 10px;
+}
+.wa-empty-desc {
+  font-size: 14px;
+  color: var(--wa-text-secondary);
+  max-width: 460px;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+/* Active chat header */
+.wa-chat-header {
+  height: 60px;
+  background: var(--wa-header-bg);
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--wa-border);
+  gap: 12px;
   flex: none;
-  width: 36px;
-  height: 36px;
+  z-index: 5;
+}
+.wa-chat-header-avatar {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: var(--accent-light);
-  border: 1px solid #bfdbfe;
+  background: #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
-  color: var(--accent);
+  font-size: 15px;
+  color: #334155;
+  cursor: pointer;
+  flex: none;
 }
-.step.done .n {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+.wa-chat-header-details {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.wa-chat-header-name {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--wa-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wa-chat-header-status {
+  font-size: 12px;
+  color: var(--wa-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* QR */
-.qrwrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
-.qrwrap img {
-  border-radius: 16px;
+.wa-header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--wa-border);
   background: #ffffff;
-  padding: 12px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.err {
-  background: var(--red-light);
-  border: 1px solid #fecaca;
+.wa-header-action-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.wa-header-action-btn.active {
+  background: #e7fce3;
+  color: var(--wa-green-dark);
+  border-color: #86efac;
+}
+
+/* Chat Messages Canvas (WhatsApp Wallpaper) */
+.wa-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: var(--wa-bg);
+  background-image: radial-gradient(#d5d0c8 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+@media (max-width: 900px) {
+  .wa-messages-container { padding: 12px 14px; }
+}
+
+.wa-date-divider {
+  align-self: center;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #54656f;
+  margin: 10px 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wa-msg-bubble {
+  max-width: 68%;
+  padding: 6px 10px 7px 11px;
+  border-radius: 8px;
+  font-size: 14.2px;
+  line-height: 1.45;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  word-break: break-word;
+}
+.wa-msg-bubble.them {
+  align-self: flex-start;
+  background: var(--wa-bubble-them);
+  color: var(--wa-text-primary);
+  border-top-left-radius: 0;
+}
+.wa-msg-bubble.me {
+  align-self: flex-end;
+  background: var(--wa-bubble-me);
+  color: var(--wa-text-primary);
+  border-top-right-radius: 0;
+}
+
+.wa-msg-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  float: right;
+  margin-left: 12px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--wa-text-muted);
+}
+.wa-tick-blue { color: var(--wa-blue-tick); font-weight: 700; }
+.wa-tick-gray { color: var(--wa-gray-tick); font-weight: 700; }
+
+.wa-media-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.06);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* Chat Input Bar */
+.wa-chat-footer {
+  background: var(--wa-header-bg);
+  padding: 8px 16px;
+  border-top: 1px solid var(--wa-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: none;
+}
+.wa-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wa-staged-media-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid var(--wa-border);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e293b;
+}
+.wa-input-box {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 14.5px;
+  outline: none;
+  color: var(--wa-text-primary);
+  transition: border-color 0.15s;
+}
+.wa-input-box:focus { border-color: #cbd5e1; }
+.wa-send-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--wa-green);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  flex: none;
+}
+.wa-send-btn:hover { background: var(--wa-green-dark); }
+.wa-send-btn:active { transform: scale(0.95); }
+.wa-send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* ---------- RIGHT DRAWER: AGENT INSPECTOR & GOALS ---------- */
+.wa-right-drawer {
+  width: 380px;
+  background: #ffffff;
+  border-left: 1px solid var(--wa-border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: none;
+  box-shadow: var(--shadow-drawer);
+  transition: margin-right 0.22s ease-in-out;
+  position: relative;
+  z-index: 10;
+}
+.wa-right-drawer.closed { display: none; }
+
+.wa-drawer-header {
+  height: 60px;
+  background: var(--wa-header-bg);
+  border-bottom: 1px solid var(--wa-border);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--wa-text-primary);
+}
+.wa-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.drawer-section {
+  background: #f8fafc;
+  border: 1px solid var(--wa-border);
   border-radius: 12px;
-  padding: 14px 16px;
-  font-size: 13.5px;
-  color: #991b1b;
-  margin-top: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.drawer-section h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-section p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--wa-text-secondary);
   line-height: 1.5;
 }
 
-/* Chat view styles */
-.bulkbar {
+/* Controls inside drawer */
+.mode-segmented {
   display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  background: #f8fafc;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin: 14px 0;
+  background: #e2e8f0;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
 }
-.bulkbar select { width: auto; min-width: 130px; }
-.banner {
-  background: var(--accent-light);
-  border: 1px solid #bfdbfe;
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 14px 0;
-  font-size: 14px;
-  line-height: 1.55;
-  color: #1e3a8a;
-}
-.banner b { color: #1e40af; }
-.chatitem { border-bottom: 1px solid var(--border-subtle); transition: background .15s ease; }
-.chatitem:last-child { border-bottom: 0; }
-.chathead {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 8px;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: background .15s ease;
-}
-.chathead:hover { background: #f8fafc; }
-.chathead input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; }
-.chathead .nm { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.chathead .tag {
-  font-size: 11px;
-  color: var(--muted);
-  background: #f1f5f9;
-  border: 1px solid var(--border);
+.mode-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
   border-radius: 6px;
-  padding: 2px 7px;
-  margin-left: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.mode-btn.active.auto { background: #ffffff; color: #15803d; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.mode-btn.active.draft { background: #ffffff; color: #b45309; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.mode-btn.active.off { background: #ffffff; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+label.input-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+}
+input[type=text], textarea, select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--wa-text-primary);
+  background: #ffffff;
+  outline: none;
+}
+input[type=text]:focus, textarea:focus, select:focus {
+  border-color: var(--wa-green);
+  box-shadow: 0 0 0 2px rgba(0,168,132,0.15);
+}
+
+.btn-primary-green {
+  background: var(--wa-green);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-primary-green:hover { background: var(--wa-green-dark); }
+.btn-ghost {
+  background: #ffffff;
+  border: 1px solid var(--wa-border);
+  color: #334155;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-ghost:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+.disclaimer-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #1e40af;
+  line-height: 1.45;
+}
+
+/* ---------- MODALS ---------- */
+.wa-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(11,20,26,0.65);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.wa-modal-backdrop.open { display: flex; }
+
+.wa-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  overflow: hidden;
+  animation: modalIn 0.18s ease-out;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.wa-modal-head {
+  padding: 16px 22px;
+  background: var(--wa-header-bg);
+  border-bottom: 1px solid var(--wa-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wa-modal-head h2 { margin: 0; font-size: 17.5px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+.wa-modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.wa-modal-foot {
+  padding: 14px 22px;
+  background: var(--wa-header-bg);
+  border-top: 1px solid var(--wa-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Setup Steps */
+.step-card {
+  border: 1px solid var(--wa-border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  gap: 16px;
+  background: #ffffff;
+}
+.step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
   flex: none;
 }
-.chatedit {
-  display: none;
-  padding: 10px 14px 18px 36px;
-  background: #f8fafc;
-  border-radius: 12px;
-  margin: 4px 0 14px;
-  border: 1px solid var(--border-subtle);
-}
-.chatitem.open .chatedit { display: block; }
-.chatedit .grid2 { margin-bottom: 12px; }
+.step-num.done { background: var(--wa-green); color: #fff; }
+.step-content { flex: 1; min-width: 0; }
+.step-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+.step-desc { font-size: 13px; color: var(--wa-text-secondary); margin: 0 0 14px; line-height: 1.5; }
 
-.stylelib-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 6px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.stylelib-row:last-child { border: 0; }
-.stylelib-row .nm { font-weight: 600; flex: 1; color: var(--text); }
-
-/* Model picker list */
-.modellist {
-  max-height: 230px;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-top: 10px;
-  background: #ffffff;
-  box-shadow: var(--shadow-sm);
-}
-.modellist button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text);
-  padding: 10px 14px;
-  font-size: 13.5px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .15s ease;
-}
-.modellist button:hover { background: #f8fafc; }
-.modellist button:last-child { border-bottom: 0; }
-.modellist button.picked { background: var(--accent-light); color: var(--accent); font-weight: 600; }
-
-.tone-chip {
-  font-size: 12px;
-  font-weight: 500;
-  color: #475569;
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  padding: 4px 12px;
-  background: #f1f5f9;
-}
-.toast {
+/* Toast */
+.wa-toast {
   position: fixed;
   bottom: 24px;
-  right: 24px;
-  background: #0f172a;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111b21;
   color: #ffffff;
-  border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  display: none;
-  z-index: 100;
-  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.25);
-}
-
-/* Chat conversation preview bubbles (WhatsApp authenticity) */
-.msgs-box-container {
-  background: #efeae2;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px;
-  max-height: 280px;
-  overflow-y: auto;
-  margin-top: 12px;
-}
-.msg-bubble {
-  max-width: 78%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  padding: 10px 22px;
+  border-radius: 20px;
   font-size: 13.5px;
-  line-height: 1.45;
-  word-break: break-word;
-  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+  font-weight: 500;
+  z-index: 200;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  display: none;
 }
-.msg-bubble.me {
-  background: #d9fdd3;
-  color: #111b21;
-  margin-left: auto;
-  border-top-right-radius: 0;
-}
-.msg-bubble.them {
-  background: #ffffff;
-  color: #111b21;
-  margin-right: auto;
-  border-top-left-radius: 0;
-}
-.msg-time { font-size: 10.5px; color: #667781; margin-top: 3px; text-align: right; }
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="mark">WA</div>
-      <div class="txt">
-        <div class="name">WA-Agent</div>
-        <div class="sub">reply in your style</div>
+
+<div class="wa-app-backdrop"></div>
+
+<div class="wa-app-window">
+
+  <!-- ==================== LEFT PANE: CHATS LIST ==================== -->
+  <aside class="wa-left-pane">
+    <div class="wa-pane-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="wa-user-avatar" id="btn-user-avatar" title="Connection Settings">
+          <span id="user-initials">WA</span>
+          <span class="wa-status-dot" id="header-status-dot"></span>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:14.5px">WhatsApp Agent</div>
+          <div style="font-size:11px;color:var(--wa-text-secondary)" id="wa-connection-text">Connecting…</div>
+        </div>
+      </div>
+      <div class="wa-header-icons">
+        <button class="wa-icon-btn" id="btn-open-rules" title="Logic Base &amp; Trigger Modes (Scammer, Abuse, Custom Rules)">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="wa-icon-btn" id="btn-open-ques" title="Questions Folder (Unanswered &amp; Sensitive Queries)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="wa-icon-badge" id="ques-badge">0</span>
+        </button>
+        <button class="wa-icon-btn" id="btn-open-mem" title="Memory Folder (Learned Facts &amp; Access Levels)">
+          <svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z" stroke-width="2"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z" stroke-width="2"/></svg>
+        </button>
+        <button class="wa-icon-btn" id="btn-open-kb" title="Knowledge Base (Sites, Prices, Policies)">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" stroke-width="2"/><path d="M6 6h10M6 10h10M6 14h6" stroke-width="2"/></svg>
+        </button>
+        <button class="wa-icon-btn" id="btn-open-setup" title="Connection &amp; AI Setup">
+          <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
       </div>
     </div>
-    <nav class="nav">
-      <button data-route="home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>
-        <span class="lbl">Home</span>
-      </button>
-      <button data-route="chats">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>
-        <span class="lbl">Chats</span>
-      </button>
-      <button data-route="setup">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>
-        <span class="lbl">Setup</span>
-      </button>
-    </nav>
-    <div class="side-foot">
-      <span class="dot" id="side-dot"></span>
-      <span id="side-text" class="lbl">connecting…</span>
+
+    <!-- Search & Quick Filters -->
+    <div class="wa-search-bar-wrap">
+      <div class="wa-search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="chat-search" placeholder="Search or start new chat">
+      </div>
+    </div>
+    <div class="wa-filter-chips">
+      <div class="wa-chip active" data-filter="all">All</div>
+      <div class="wa-chip" data-filter="auto">Auto Reply</div>
+      <div class="wa-chip" data-filter="draft">Drafts</div>
+      <div class="wa-chip" data-filter="groups">Groups</div>
+    </div>
+
+    <!-- Chats Scrollable List -->
+    <div class="wa-chat-list" id="chats-container">
+      <div style="padding:24px;text-align:center;color:var(--wa-text-muted);font-size:13.5px">Loading conversations…</div>
     </div>
   </aside>
 
-  <div class="main">
-    <div class="topbar">
-      <h1 id="page-title">Home</h1>
-      <div class="spacer"></div>
-      <span id="top-badges" class="row"></span>
+  <!-- ==================== CENTER PANE: ACTIVE CONVERSATION ==================== -->
+  <main class="wa-center-pane" id="center-pane">
+    <!-- Empty State -->
+    <div class="wa-empty-state" id="empty-state">
+      <div class="wa-empty-icon">
+        <svg viewBox="0 0 24 24" width="46" height="46" fill="none">
+          <path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/>
+          <path fill="#fff" d="M17.52 14.33c-.22-.11-1.3-.64-1.5-.71-.2-.07-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.17-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.21-.69-1.66-.18-.43-.37-.37-.5-.38l-.43-.01c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.86s.8 2.15.91 2.3c.11.15 1.57 2.4 3.81 3.36.53.23.95.37 1.27.47.53.17 1.02.15 1.4.09.43-.06 1.3-.53 1.48-1.04.19-.51.19-.95.13-1.04-.06-.1-.2-.16-.42-.27z"/>
+        </svg>
+      </div>
+      <h2 class="wa-empty-title">WhatsApp Web Agent</h2>
+      <p class="wa-empty-desc">Send and receive WhatsApp messages with your personal AI agent. Select any conversation to set goals, train on your chat style, configure scammer/abuse logic, and reply with human cadence.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="btn-primary-green" id="empty-setup-btn">Configure Connection &amp; AI</button>
+        <button class="btn-ghost" id="empty-rules-btn">⚡ Logic Base &amp; Rules</button>
+        <button class="btn-ghost" id="empty-kb-btn">📚 Knowledge Base</button>
+      </div>
     </div>
-    <div class="content">
 
-      <!-- HOME (Pixel-accurate Mockup Implementation) -->
-      <section class="view" id="view-home">
-        <div class="hero-wrap">
-          <div class="hero-badge-icon">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none">
-              <path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/>
-              <path fill="#fff" d="M17.52 14.33c-.22-.11-1.3-.64-1.5-.71-.2-.07-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.17-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.21-.69-1.66-.18-.43-.37-.37-.5-.38l-.43-.01c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.86s.8 2.15.91 2.3c.11.15 1.57 2.4 3.81 3.36.53.23.95.37 1.27.47.53.17 1.02.15 1.4.09.43-.06 1.3-.53 1.48-1.04.19-.51.19-.95.13-1.04-.06-.1-.2-.16-.42-.27z"/>
-            </svg>
-          </div>
-          <h1 class="hero-title">Your WhatsApp, in your words.</h1>
-          <p class="hero-desc">WA-Agent learns how you text from your exported chats and replies for you — per chat, in the right tone, with human-like timing. Bring any AI key, run it for next to nothing.</p>
-          <div class="hero-actions">
-            <a class="btn-hero-primary" href="#/setup">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-              Open setup
-            </a>
-            <a class="btn-hero-secondary" href="#/chats">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              Manage chats
-            </a>
-          </div>
+    <!-- Active Chat View (Hidden by default) -->
+    <div id="active-chat-wrap" style="display:none;flex-direction:column;height:100%">
+      <div class="wa-chat-header">
+        <div class="wa-chat-header-avatar" id="active-avatar">C</div>
+        <div class="wa-chat-header-details" id="active-header-details">
+          <div class="wa-chat-header-name" id="active-name">Chat Name</div>
+          <div class="wa-chat-header-status" id="active-sub">Agent: Off</div>
         </div>
-
-        <div class="home-stat-grid" id="home-stats"></div>
-
-        <div class="how-card">
-          <h2 class="how-title">How it works</h2>
-          <div class="how-list">
-            <div class="how-item">
-              <div class="how-num">1</div>
-              <div class="how-content">
-                <div class="how-item-title">Connect WhatsApp</div>
-                <div class="how-item-desc">Scan a QR once in Setup — the session is remembered.</div>
-              </div>
-            </div>
-            <div class="how-item">
-              <div class="how-num">2</div>
-              <div class="how-content">
-                <div class="how-item-title">Bring your AI key</div>
-                <div class="how-item-desc">Gemini, Claude, OpenAI, Grok, OpenRouter or a local model — free tiers work fine.</div>
-              </div>
-            </div>
-            <div class="how-item">
-              <div class="how-num">3</div>
-              <div class="how-content">
-                <div class="how-item-title">Teach it your style</div>
-                <div class="how-item-desc">Export any chat and upload it. The analyzer learns your messages only, even in group chats.</div>
-              </div>
-            </div>
-            <div class="how-item">
-              <div class="how-num">4</div>
-              <div class="how-content">
-                <div class="how-item-title">Set it per chat</div>
-                <div class="how-item-desc">Professional for the work group, slang for friends. Auto-reply, draft-only, or off.</div>
-              </div>
-            </div>
-          </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="wa-header-action-btn" id="btn-quick-analyze" title="Analyze this chat in 1 click directly from your sent messages">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+            Analyze chat
+          </button>
+          <button class="wa-header-action-btn" id="btn-toggle-drawer" title="Open Agent &amp; Goal Inspector">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            Agent Settings
+          </button>
+          <button class="wa-icon-btn" id="btn-refresh-msgs" title="Reload Conversation">
+            <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
         </div>
-      </section>
+      </div>
 
-      <!-- CHATS -->
-      <section class="view" id="view-chats">
-        <div class="card">
-          <div class="row" style="justify-content:space-between">
-            <h2 style="margin:0">Chats</h2>
-            <button class="btn ghost sm" id="chats-refresh">Refresh</button>
+      <!-- Messages Canvas -->
+      <div class="wa-messages-container" id="messages-container">
+        <!-- Message bubbles injected here -->
+      </div>
+
+      <!-- Input Bar with Attachment Support -->
+      <div class="wa-chat-footer">
+        <div class="wa-staged-media-bar" id="media-preview-bar">
+          <span style="font-weight:700">📎 Attached:</span>
+          <span id="media-preview-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <button id="media-remove-btn" style="background:none;border:none;color:#ef4444;font-weight:700;cursor:pointer">✕</button>
+        </div>
+        <div class="wa-input-row">
+          <input type="file" id="media-file-input" style="display:none">
+          <button class="wa-icon-btn" id="btn-attach-media" title="Attach photo, video, document, or audio">
+            <svg viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="text" class="wa-input-box" id="msg-input" placeholder="Type a message (or enter caption for attachment)">
+          <button class="wa-send-btn" id="btn-send-msg" title="Send message">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== RIGHT DRAWER: AGENT INSPECTOR & GOALS ==================== -->
+  <aside class="wa-right-drawer closed" id="right-drawer">
+    <div class="wa-drawer-header">
+      <button class="wa-icon-btn" id="btn-close-drawer" style="margin-left:-8px">
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <div>Chat Agent &amp; Goals</div>
+    </div>
+
+    <div class="wa-drawer-content">
+      <!-- Mode Selection -->
+      <div class="drawer-section">
+        <h3>🤖 Auto-Reply Mode</h3>
+        <p>Control whether the agent replies automatically, drafts for review, or stays silent.</p>
+        <div class="mode-segmented">
+          <button class="mode-btn auto" data-mode="auto">Auto</button>
+          <button class="mode-btn draft" data-mode="draft">Draft</button>
+          <button class="mode-btn off" data-mode="off">Off</button>
+        </div>
+      </div>
+
+      <!-- 🎯 Chat Goal -->
+      <div class="drawer-section">
+        <h3>🎯 Chat Goal &amp; Objective</h3>
+        <p>Give this conversation a targeted purpose. The AI will steer responses toward this goal while matching your style.</p>
+
+        <label class="input-lbl">Goal Presets
+          <select id="drawer-goal-preset">
+            <option value="">-- Choose a preset or write custom --</option>
+            <option value="Motivate a friend to join a trip this weekend. Address budget or time hesitations, highlight relaxation and fun.">✈️ Motivate friend to join a trip</option>
+            <option value="Encourage and motivate them to focus on studying for upcoming exams. Keep it supportive and uplifting.">📚 Motivate to study &amp; focus</option>
+            <option value="Politely and warmly decline their invitation or request without burning bridges or sounding cold.">🙅 Politely refuse / decline request</option>
+            <option value="Answer product questions enthusiastically and guide them to close the deal or sign up.">💼 Close a business / sales deal</option>
+            <option value="Keep in touch warmly, ask how they are doing, and maintain a friendly relationship.">🤝 Friendly check-in &amp; catch up</option>
+          </select>
+        </label>
+
+        <label class="input-lbl">Goal Prompt Instructions
+          <textarea id="drawer-goal-text" rows="3" placeholder="e.g. Convince him to go to the mountains with us. Highlight that we already booked the car."></textarea>
+        </label>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="drawer-keep-going" style="accent-color:var(--wa-green);width:16px;height:16px">
+          Keep conversation going (ask natural follow-ups)
+        </label>
+      </div>
+
+      <!-- Style & One-Click Learn -->
+      <div class="drawer-section">
+        <h3>🎨 Tone &amp; Style</h3>
+        <p>Select a persona or train a personalized style from your messages in this chat.</p>
+        <label class="input-lbl">Current Style
+          <select id="drawer-style-select"></select>
+        </label>
+        <button class="btn-ghost" id="drawer-btn-analyze" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/></svg>
+          ⚡ Analyze this chat in 1 click
+        </button>
+        <span id="drawer-analyze-status" style="font-size:12px;color:var(--wa-text-secondary)"></span>
+      </div>
+
+      <!-- Cadence & Timing -->
+      <div class="drawer-section">
+        <h3>⏱️ Reply Cadence</h3>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+          <input type="checkbox" id="drawer-reply-asap" checked style="accent-color:var(--wa-green);width:16px;height:16px">
+          ⚡ Reply ASAP
+        </label>
+        <div class="disclaimer-box">
+          <b>Note on latency:</b> Message drafting and AI generation typically take ~3–8 seconds. In Reply ASAP mode, messages are dispatched as soon as generated with a brief natural typing status.
+        </div>
+        <div id="drawer-max-delay-wrap" style="display:none">
+          <label class="input-lbl">Max Delay Range (seconds)
+            <input type="text" id="drawer-delay-max" placeholder="e.g. 15" style="width:100px">
+          </label>
+        </div>
+      </div>
+
+      <!-- Read Receipts (Blue Tick) -->
+      <div class="drawer-section">
+        <h3>👀 Read Receipts (Blue Tick)</h3>
+        <select id="drawer-bluetick">
+          <option value="">Inherit global setting</option>
+          <option value="1">Always send blue tick (seen)</option>
+          <option value="0">Ghost mode (silent double gray tick)</option>
+        </select>
+      </div>
+
+      <button class="btn-primary-green" id="btn-save-drawer-cfg" style="width:100%;padding:12px">Save Agent Settings</button>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ==================== LOGIC BASE & RULES MODAL ==================== -->
+<div class="wa-modal-backdrop" id="modal-rules">
+  <div class="wa-modal" style="max-width:740px">
+    <div class="wa-modal-head">
+      <h2>⚡ Logic Base &amp; Trigger Modes</h2>
+      <button class="wa-icon-btn" id="modal-rules-close">✕</button>
+    </div>
+    <div class="wa-modal-body">
+      <p style="margin:0;font-size:13px;color:var(--wa-text-secondary)">
+        Set conditional logic rules. If someone sends dirty words, spam, or scams, the bot responds according to your selected mode.
+      </p>
+
+      <!-- Preset Modes Quick Setup -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <b style="font-size:14px">🛡️ Scammer Deflector</b>
+            <input type="checkbox" id="rule-quick-scammer-toggle" checked style="accent-color:var(--wa-green);width:16px;height:16px">
           </div>
-          <div id="chats-banner" class="banner" style="display:none"></div>
-          <div class="bulkbar">
-            <span class="small muted" id="sel-count">0 selected</span>
-            <button class="btn ghost sm" data-bulk="all">All</button>
-            <button class="btn ghost sm" data-bulk="groups">All groups</button>
-            <button class="btn ghost sm" data-bulk="personal">Personal</button>
-            <button class="btn ghost sm" data-bulk="none">Clear</button>
-            <select id="bulk-style" title="Style to apply"></select>
-            <button class="btn sm" id="bulk-apply-style">Apply style</button>
-            <select id="bulk-mode" title="Mode to apply">
-              <option value="off">off</option><option value="draft">draft</option><option value="auto">auto</option>
+          <span style="font-size:12px;color:var(--wa-text-secondary)">Triggers on: crypto, forex, guaranteed profit, wire money, lottery winner.</span>
+          <label class="input-lbl">Behavior Mode
+            <select id="rule-quick-scammer-mode">
+              <option value="scambait">Scambaiter (Waste their time with naive rambling questions)</option>
+              <option value="polite_decline">Cold Dismissal ("Not interested, do not contact")</option>
+              <option value="flag_question">Flag for Review (Silent, no auto-reply)</option>
             </select>
-            <button class="btn sm" id="bulk-apply-mode">Apply mode</button>
-            <select id="bulk-bluetick" title="Blue tick to apply">
-              <option value="">Blue tick: Inherit</option>
-              <option value="1">Blue tick: Always</option>
-              <option value="0">Blue tick: Ghost</option>
+          </label>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <b style="font-size:14px">🤬 Abuse &amp; Dirty Words</b>
+            <input type="checkbox" id="rule-quick-abuse-toggle" checked style="accent-color:var(--wa-green);width:16px;height:16px">
+          </div>
+          <span style="font-size:12px;color:var(--wa-text-secondary)">Triggers on: profanity, insults, vulgar language, hostility.</span>
+          <label class="input-lbl">Behavior Mode
+            <select id="rule-quick-abuse-mode">
+              <option value="roast">Sharp Wit / Roast (Sarcastic, unbothered comeback)</option>
+              <option value="polite_decline">Formal Warning ("Conversation reported and archived")</option>
+              <option value="flag_question">Flag for Review (Silent, no auto-reply)</option>
             </select>
-            <button class="btn sm" id="bulk-apply-bluetick">Apply</button>
-          </div>
-          <p class="small muted">Click a chat to set its tone, mode and timing. Tick boxes to apply one style or mode to many chats at once.</p>
-          <div id="chat-list"><p class="muted">Loading…</p></div>
+          </label>
         </div>
+      </div>
 
-        <div class="card">
-          <h2 style="margin:0 0 4px">My styles</h2>
-          <p class="small muted">Styles you taught from chat exports. Deleting one resets its chats to Friendly.</p>
-          <div id="style-lib"><p class="muted">Loading…</p></div>
+      <!-- Add Custom Logic Rule -->
+      <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <b style="font-size:14px;color:#1e293b">Add Custom Logic Rule</b>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1" class="input-lbl">Rule Name
+            <input type="text" id="rule-name-input" placeholder="e.g. Sales Pitch Deflector">
+          </label>
+          <label style="flex:1" class="input-lbl">Action
+            <select id="rule-action-input">
+              <option value="scambait">Scambaiter Time-Waster</option>
+              <option value="roast">Witty Roast / Comeback</option>
+              <option value="polite_decline">Polite / Cold Decline</option>
+              <option value="fixed_reply">Fixed Canned Reply</option>
+              <option value="flag_question">Flag in Questions Folder (Silent)</option>
+              <option value="custom_prompt">Custom AI Persona Prompt</option>
+            </select>
+          </label>
         </div>
-
-        <div class="card" style="margin-top:14px">
-          <h2 style="margin:0 0 6px">Send a message</h2>
-          <p class="small">Send a one-off message from your own WhatsApp number — handy when the agent can't do it for you. Doesn't change any chat's auto-reply mode.</p>
-          <div class="row" style="gap:8px;align-items:center">
-            <select id="send-chat" style="flex:1;min-width:180px"><option value="">Select a chat…</option></select>
-            <button class="btn ghost sm" id="send-refresh" title="Reload chat list">↻</button>
-          </div>
-          <textarea id="send-text" rows="2" style="width:100%;margin-top:8px;box-sizing:border-box" placeholder="Type your message…"></textarea>
-          <div class="row" style="margin-top:8px;justify-content:flex-end">
-            <button class="btn" id="send-btn">Send via WhatsApp</button>
-          </div>
+        <label class="input-lbl">Trigger Keywords (comma separated)
+          <input type="text" id="rule-keywords-input" placeholder="e.g. discount, cheaper, promo code, free trial">
+        </label>
+        <div id="rule-custom-content-wrap" style="display:none">
+          <label class="input-lbl" id="rule-custom-content-label">Canned Reply or Custom Prompt
+            <textarea id="rule-custom-content-input" rows="2" placeholder="Enter fixed message text or custom prompt..."></textarea>
+          </label>
         </div>
-      </section>
-
-      <!-- SETUP -->
-      <section class="view" id="view-setup">
-        <div class="card">
-          <div class="step" id="step-wa">
-            <div class="n">1</div>
-            <div style="flex:1">
-              <h2>Connect WhatsApp</h2>
-              <p>Link this server as a device. You only do this once — the session is saved.</p>
-              <div id="s-qr"><p class="muted">Starting…</p></div>
-            </div>
-          </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn-primary-green" id="btn-save-rule">Save Rule</button>
         </div>
+      </div>
 
-        <div class="card">
-          <div class="step" id="step-llm">
-            <div class="n">2</div>
-            <div style="flex:1">
-              <h2>Connect your AI</h2>
-              <p>Bring your own key — any provider. Free tiers and local models work, nothing is paid for you.</p>
-              <div class="grid2">
-                <label class="f">Provider
-                  <select id="s-prov"></select>
-                </label>
-                <label class="f">Model <span class="hint">pick a suggestion, load from provider, or type model id</span>
-                  <input type="text" id="s-model" list="s-models" placeholder="e.g. gemini-2.5-flash">
-                  <datalist id="s-models"></datalist>
-                </label>
-              </div>
-              <div id="s-model-list" class="modellist" style="display:none"></div>
-              <div class="grid2" style="margin-top:12px">
-                <label class="f" id="s-key-wrap">API key
-                  <input type="password" id="s-key" placeholder="Paste your key" autocomplete="off">
-                </label>
-                <label class="f" id="s-url-wrap" style="display:none">API endpoint
-                  <input type="text" id="s-baseurl" placeholder="https://…/v1">
-                </label>
-              </div>
-              <p class="hint" id="s-keyhint"></p>
-              <div class="row" style="margin-top:14px">
-                <button class="btn" id="s-save-llm">Save</button>
-                <button class="btn ghost" id="s-load-models">Load models</button>
-                <button class="btn ghost" id="s-test-llm">Test connection</button>
-                <button class="btn ghost" id="s-clear-key" style="color:var(--red);border-color:#fecaca;background:var(--red-light)">Remove key</button>
-                <span id="s-llm-status" class="small muted"></span>
-              </div>
-              <div id="s-llm-error" style="display:none;margin-top:10px"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="step">
-            <div class="n">3</div>
-            <div style="flex:1">
-              <h2>Reply timing & behavior</h2>
-              <p>Each reply waits a <i>random</i> time inside this range and pulses “typing…” realistically based on reply length, eliminating abrupt delays.</p>
-              <div class="row">
-                <label class="f">Min (seconds)<input type="text" id="s-dmin" style="width:90px"></label>
-                <label class="f">Max (seconds)<input type="text" id="s-dmax" style="width:90px"></label>
-                <button class="btn" id="s-save-timing" style="align-self:flex-end">Save settings</button>
-              </div>
-              <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle)">
-                <label class="row" style="align-items:flex-start;gap:10px;cursor:pointer">
-                  <input type="checkbox" id="s-bluetick" style="margin-top:4px;accent-color:var(--accent);width:16px;height:16px">
-                  <div>
-                    <b>Send blue tick (read receipts)</b>
-                    <div class="small muted">When checked, marks incoming messages as read before replying. When unchecked, messages are read silently in ghost mode (sender keeps double gray ticks).</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="step">
-            <div class="n">4</div>
-            <div style="flex:1">
-              <h2>Teach it your style</h2>
-              <p>WhatsApp → chat → ⋮ → More → Export chat → <b>Without media</b>. Upload the <code>.txt</code> or <code>.zip</code> — Android and iPhone formats both work. Only <i>your</i> messages are learned (auto-detected as the most frequent sender, even in group chats). Give the style a name — you'll pick which chats use it next.</p>
-              <div class="row">
-                <label class="f" style="flex:1;min-width:200px">Name this style<input type="text" id="s-stylename" placeholder="e.g. My casual tone"></label>
-              </div>
-              <div class="row" style="margin-top:10px;align-items:center">
-                <span class="small muted">Built-in tones:</span>
-                <span id="s-tones" class="row" style="gap:6px"></span>
-              </div>
-              <div class="row" style="margin-top:14px">
-                <input type="file" id="s-file" accept=".txt,.zip">
-                <button class="btn" id="s-upload">Analyze &amp; save</button>
-              </div>
-              <p class="small" id="s-upload-result"></p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="step">
-            <div class="n">5</div>
-            <div style="flex:1">
-              <h2>Assign styles per chat</h2>
-              <p>Head to <a href="#/chats">Chats</a> — pick a tone per conversation and switch modes between Auto, Draft and Off.</p>
-              <a class="btn ghost" href="#/chats">Go to Chats</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <!-- Existing Rules List -->
+      <div style="font-weight:700;font-size:14px;color:#1e293b">Active Logic Rules</div>
+      <div id="rules-list-container" style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;color:var(--wa-text-muted)">Loading rules…</div>
+      </div>
+    </div>
+    <div class="wa-modal-foot">
+      <button class="btn-ghost" id="modal-rules-done">Close</button>
     </div>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+
+<!-- ==================== QUESTIONS FOLDER MODAL ==================== -->
+<div class="wa-modal-backdrop" id="modal-ques">
+  <div class="wa-modal" style="max-width:740px">
+    <div class="wa-modal-head">
+      <h2>❓ Questions Folder (Pending Review)</h2>
+      <button class="wa-icon-btn" id="modal-ques-close">✕</button>
+    </div>
+    <div class="wa-modal-body">
+      <p style="margin:0;font-size:13px;color:var(--wa-text-secondary)">
+        When someone asks for sensitive info (passwords, bank info, private address) or questions the AI doesn't know, it files them here. Answer them to teach your AI and set access levels!
+      </p>
+
+      <div id="ques-list-container" style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:13px;color:var(--wa-text-muted)">No pending questions.</div>
+      </div>
+    </div>
+    <div class="wa-modal-foot">
+      <button class="btn-ghost" id="modal-ques-done">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MEMORY FOLDER MODAL ==================== -->
+<div class="wa-modal-backdrop" id="modal-mem">
+  <div class="wa-modal" style="max-width:740px">
+    <div class="wa-modal-head">
+      <h2>🧠 Memory Folder (Learned Facts)</h2>
+      <button class="wa-icon-btn" id="modal-mem-close">✕</button>
+    </div>
+    <div class="wa-modal-body">
+      <p style="margin:0;font-size:13px;color:var(--wa-text-secondary)">
+        Verified facts learned from you or your answers. Each memory has an access level: <b>Universal</b> (all chats), <b>Chat-Only</b> (specific person), or <b>Private</b> (confidential, AI never shares).
+      </p>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:6px">
+        <button class="wa-chip active" data-mem-filter="all">All Memories</button>
+        <button class="wa-chip" data-mem-filter="universal">🌐 Universal</button>
+        <button class="wa-chip" data-mem-filter="chat">💬 Chat-Only</button>
+        <button class="wa-chip" data-mem-filter="private">🔒 Private (Confidential)</button>
+      </div>
+
+      <!-- Add Memory Form -->
+      <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px">
+        <b style="font-size:14px;color:#1e293b">Add Learned Fact</b>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1" class="input-lbl">Topic / Title
+            <input type="text" id="mem-topic-input" placeholder="e.g. Discount Limit or Home Address">
+          </label>
+          <label style="flex:1" class="input-lbl">Access Level
+            <select id="mem-access-input">
+              <option value="universal">🌐 Universal (Usable in all chats)</option>
+              <option value="chat">💬 This Chat Only (Restricted to active contact)</option>
+              <option value="private">🔒 Private (Confidential directive — AI never reveals)</option>
+            </select>
+          </label>
+        </div>
+        <label class="input-lbl">Fact or Directive Content
+          <textarea id="mem-fact-input" rows="2" placeholder="e.g. We only give up to 10% discount for orders over 100 units."></textarea>
+        </label>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn-primary-green" id="btn-save-mem">Save to Memory</button>
+        </div>
+      </div>
+
+      <!-- Memories List -->
+      <div id="mem-list-container" style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;color:var(--wa-text-muted)">Loading memories…</div>
+      </div>
+    </div>
+    <div class="wa-modal-foot">
+      <button class="btn-ghost" id="modal-mem-done">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ONBOARDING / SETUP MODAL ==================== -->
+<div class="wa-modal-backdrop" id="modal-setup">
+  <div class="wa-modal">
+    <div class="wa-modal-head">
+      <h2>Connect WhatsApp &amp; AI Provider</h2>
+      <button class="wa-icon-btn" id="modal-setup-close">✕</button>
+    </div>
+    <div class="wa-modal-body">
+      <!-- Step 1: Connect WhatsApp -->
+      <div class="step-card">
+        <div class="step-num" id="step-wa-num">1</div>
+        <div class="step-content">
+          <h3 class="step-title">Connect WhatsApp</h3>
+          <p class="step-desc">Link this server as a device. Scan the QR code once; your session is permanently saved.</p>
+          <div id="setup-wa-container">
+            <div style="font-size:13px;color:var(--wa-text-muted)">Checking WhatsApp session…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Connect AI Provider -->
+      <div class="step-card">
+        <div class="step-num" id="step-ai-num">2</div>
+        <div class="step-content">
+          <h3 class="step-title">Connect Your AI</h3>
+          <p class="step-desc">Bring any API key. Google Gemini, Claude, OpenAI, Grok, OpenRouter or local models.</p>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <label class="input-lbl">Provider
+              <select id="setup-prov-select"></select>
+            </label>
+            <label class="input-lbl">Model
+              <input type="text" id="setup-model-input" list="setup-models-datalist" placeholder="e.g. gemini-2.5-flash">
+              <datalist id="setup-models-datalist"></datalist>
+            </label>
+            <label class="input-lbl" id="setup-key-wrap">API Key
+              <input type="password" id="setup-key-input" placeholder="Paste your API key" autocomplete="off">
+            </label>
+            <label class="input-lbl" id="setup-url-wrap" style="display:none">Custom API Endpoint
+              <input type="text" id="setup-url-input" placeholder="https://…/v1">
+            </label>
+            <div id="setup-keyhint" style="font-size:12px;color:var(--wa-text-secondary)"></div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+              <button class="btn-primary-green" id="setup-save-ai">Save AI Settings</button>
+              <button class="btn-ghost" id="setup-test-ai">Test Connection</button>
+              <button class="btn-ghost" id="setup-load-models">Load Models</button>
+              <button class="btn-ghost" id="setup-clear-key" style="color:#ef4444">Remove Key</button>
+            </div>
+            <div id="setup-ai-status" style="font-size:12.5px;color:var(--wa-text-secondary)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="wa-modal-foot">
+      <button class="btn-primary-green" id="modal-setup-done">Enter WhatsApp Agent</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== KNOWLEDGE BASE MODAL ==================== -->
+<div class="wa-modal-backdrop" id="modal-kb">
+  <div class="wa-modal" style="max-width:720px">
+    <div class="wa-modal-head">
+      <h2>📚 Knowledge Base (Sites, Prices, Policies)</h2>
+      <button class="wa-icon-btn" id="modal-kb-close">✕</button>
+    </div>
+    <div class="wa-modal-body">
+      <p style="margin:0;font-size:13px;color:var(--wa-text-secondary)">
+        Add your website links, pricing tables, refund policies, or business FAQs. When auto-replying, the AI references these exact facts to answer questions accurately!
+      </p>
+
+      <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-weight:700;font-size:14px;color:#1e293b">Add Knowledge Item</div>
+        <div style="display:flex;gap:10px">
+          <label style="flex:1" class="input-lbl">Type
+            <select id="kb-type-select">
+              <option value="url">Website URL (Auto-Scrapes Page Content)</option>
+              <option value="text">Notes / Price List / Policy Text</option>
+            </select>
+          </label>
+          <label style="flex:2" class="input-lbl">Title
+            <input type="text" id="kb-title-input" placeholder="e.g. Pricing &amp; Plans or Trip Details">
+          </label>
+        </div>
+        <div id="kb-url-field">
+          <label class="input-lbl">Website URL
+            <input type="text" id="kb-url-input" placeholder="https://yourwebsite.com/pricing">
+          </label>
+        </div>
+        <div>
+          <label class="input-lbl">Content / Notes
+            <textarea id="kb-content-input" rows="3" placeholder="Paste pricing packages, refund rules, schedule, or additional info here…"></textarea>
+          </label>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button class="btn-primary-green" id="btn-save-kb">Save Knowledge</button>
+        </div>
+      </div>
+
+      <div style="font-weight:700;font-size:14px;color:#1e293b">Saved Knowledge Documents</div>
+      <div id="kb-list-container" style="display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:13px;color:var(--wa-text-muted)">Loading knowledge documents…</div>
+      </div>
+    </div>
+    <div class="wa-modal-foot">
+      <button class="btn-ghost" id="modal-kb-done">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="wa-toast" id="toast"></div>
 
 <script>
 const $ = id => document.getElementById(id);
 const api = (p, o) => fetch(p, o).then(r => r.json());
 
-function toast(msg){
-  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
-  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600);
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.style.display = 'none', 2800);
 }
 
-/* ---------- routing ---------- */
-const TITLES = { home:'Home', chats:'Chats', setup:'Setup' };
-function route(){
-  const r = (location.hash || '#/home').replace('#/','') || 'home';
-  const name = TITLES[r] ? r : 'home';
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  $('view-' + name).classList.add('active');
-  document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.route === name));
-  $('page-title').textContent = TITLES[name];
-  if (name === 'chats') loadChats();
-  if (name === 'setup') { loadProviders(); loadSetupState(); renderTones(); }
+function esc(s) {
+  return (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
-window.addEventListener('hashchange', route);
-document.querySelectorAll('.nav button').forEach(b => b.onclick = () => location.hash = '#/' + b.dataset.route);
 
-/* ---------- status ---------- */
+/* ==================== GLOBAL APP STATE ==================== */
 let STATUS = null;
-let PREV_WA_READY = false;
-async function refreshStatus(){
+let CHATS = [];
+let ACTIVE_CHAT_ID = null;
+let STYLES = { presets: [], customs: [] };
+let KNOWLEDGE = [];
+let RULES = [];
+let QUESTIONS = [];
+let MEMORIES = [];
+let ACTIVE_FILTER = 'all';
+let ACTIVE_MEM_FILTER = 'all';
+let SELECTED_MEDIA_FILE = null;
+let LAST_RENDERED_MSGS_HASH = '';
+
+/* ==================== STATUS POLLING ==================== */
+async function refreshStatus() {
   try {
     STATUS = await api('/api/status');
-    const dot = $('side-dot'), txt = $('side-text');
-    if (STATUS.waReady) {
-      dot.className = 'dot on';
-      txt.textContent = 'WhatsApp connected';
-    } else if (STATUS.waStatus && STATUS.waStatus.startsWith('loading:')) {
-      dot.className = 'dot warn';
-      txt.textContent = 'WhatsApp ' + STATUS.waStatus.replace('loading:', 'loading ');
-    } else if (STATUS.waError) {
-      dot.className = 'dot off';
-      txt.textContent = 'WhatsApp error';
-    } else {
-      dot.className = 'dot warn';
-      txt.textContent = STATUS.waStatus === 'qr' ? 'Scan QR in Setup' : 'WhatsApp starting…';
-    }
-    $('top-badges').innerHTML =
-      `<span class="badge ${STATUS.waReady ? 'on' : 'off'}">WhatsApp ${STATUS.waReady ? 'on' : 'off'}</span>` +
-      `<span class="badge ${STATUS.llmReady ? 'on' : 'off'}">${STATUS.llmReady ? esc(STATUS.llmLabel) + ' · ' + esc(STATUS.llmModel) : 'AI not set'}</span>`;
-    renderHomeStats();
-    renderSetupQR();
+    const dot = $('header-status-dot');
+    const txt = $('wa-connection-text');
 
-    // Auto-refresh chats when WhatsApp transitions to connected
-    if (STATUS.waReady && (!PREV_WA_READY || CHATS.length === 0)) {
-      const activeTab = (location.hash || '').replace('#/', '');
-      if (activeTab === 'chats' || CHATS.length === 0) {
-        loadChats();
+    if (STATUS.waReady) {
+      dot.className = 'wa-status-dot online';
+      txt.textContent = STATUS.waInfo?.pushname ? `${STATUS.waInfo.pushname} (Connected)` : 'WhatsApp Connected';
+      $('step-wa-num').className = 'step-num done';
+      $('step-wa-num').textContent = '✓';
+    } else if (STATUS.waStatus && STATUS.waStatus.startsWith('loading:')) {
+      dot.className = 'wa-status-dot warn';
+      txt.textContent = 'WhatsApp ' + STATUS.waStatus.replace('loading:', 'Loading ');
+      $('step-wa-num').className = 'step-num';
+      $('step-wa-num').textContent = '1';
+    } else if (STATUS.waError) {
+      dot.className = 'wa-status-dot error';
+      txt.textContent = 'Connection Error';
+      $('step-wa-num').className = 'step-num';
+      $('step-wa-num').textContent = '1';
+    } else {
+      dot.className = 'wa-status-dot warn';
+      txt.textContent = STATUS.waStatus === 'qr' ? 'Scan QR Code' : 'Starting…';
+      $('step-wa-num').className = 'step-num';
+      $('step-wa-num').textContent = '1';
+    }
+
+    if (STATUS.llmReady) {
+      $('step-ai-num').className = 'step-num done';
+      $('step-ai-num').textContent = '✓';
+    } else {
+      $('step-ai-num').className = 'step-num';
+      $('step-ai-num').textContent = '2';
+    }
+
+    renderSetupWA();
+    refreshQuestionsBadge();
+
+    if (!window._onboardChecked) {
+      window._onboardChecked = true;
+      if (!STATUS.waReady || !STATUS.llmReady) {
+        $('modal-setup').classList.add('open');
       }
     }
-    PREV_WA_READY = STATUS.waReady;
-  } catch(e) { /* server down */ }
+  } catch (e) {
+    /* server offline */
+  }
 }
 
-function renderHomeStats(){
-  if (!STATUS) return;
-
-  // WhatsApp status mapping
-  let waLabel = 'Not connected', waPillClass = 'pill-amber';
-  if (STATUS.waReady) {
-    waLabel = 'Connected (Saved)';
-    waPillClass = 'pill-green';
-  } else if (STATUS.waError) {
-    waLabel = 'Error';
-    waPillClass = 'pill-red';
-  } else if (STATUS.waStatus && STATUS.waStatus.startsWith('loading:')) {
-    waLabel = 'Loading…';
-    waPillClass = 'pill-amber';
-  } else if (STATUS.waStatus === 'qr') {
-    waLabel = 'Scan QR';
-    waPillClass = 'pill-amber';
-  }
-
-  // LLM status mapping
-  let llmLabel = 'Not configured', llmPillClass = 'pill-amber';
-  if (STATUS.llmReady) {
-    llmLabel = STATUS.llmLabel || 'Active';
-    llmPillClass = 'pill-blue';
-  }
-
-  // Browser status mapping
-  let browserLabel = (STATUS.browser && STATUS.browser.name) ? STATUS.browser.name : 'Chrome';
-  let browserPillClass = 'pill-purple';
-
-  const chevronSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
-
-  const waSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path fill="#25D366" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/><path fill="#fff" d="M17.52 14.33c-.22-.11-1.3-.64-1.5-.71-.2-.07-.35-.11-.5.11-.15.22-.57.71-.7.86-.13.15-.26.17-.48.06-.22-.11-.93-.34-1.77-1.09-.65-.58-1.09-1.3-1.22-1.52-.13-.22-.01-.34.1-.45.1-.1.22-.26.33-.39.11-.13.15-.22.22-.37.07-.15.04-.28-.02-.39-.06-.11-.5-1.21-.69-1.66-.18-.43-.37-.37-.5-.38l-.43-.01c-.15 0-.39.06-.59.28-.2.22-.78.76-.78 1.86s.8 2.15.91 2.3c.11.15 1.57 2.4 3.81 3.36.53.23.95.37 1.27.47.53.17 1.02.15 1.4.09.43-.06 1.3-.53 1.48-1.04.19-.51.19-.95.13-1.04-.06-.1-.2-.16-.42-.27z"/></svg>`;
-
-  const aiSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="#2563eb"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"/></svg>`;
-
-  const chromeSvg = `<svg viewBox="0 0 24 24" width="22" height="22"><path fill="#EA4335" d="M12 2C7.2 2 3.1 5.4 2.2 10l5.8 3.3c.6-2.5 2.9-4.3 5.6-4.3h8.3C20.3 5.9 16.5 2 12 2z"/><path fill="#4285F4" d="M12 8c-2.2 0-4 1.8-4 4s1.8 4 4 4 4-1.8 4-4-1.8-4-4-4z"/><path fill="#FBBC05" d="M21.9 10H13.6c-.6 0-1.1.2-1.6.6l-5.8 10c1.8.9 3.8 1.4 5.8 1.4 5.5 0 10-4.5 10-10 0-.7-.1-1.3-.1-2z"/><path fill="#34A853" d="M2.2 10C2.1 10.6 2 11.3 2 12c0 5 3.7 9.1 8.5 9.9l4.2-7.2c-1.3 1.3-3.2 1.8-5.1.9L2.2 10z"/></svg>`;
-
-  $('home-stats').innerHTML = `
-    <a class="stat-card" href="#/setup">
-      <div class="stat-icon-wrap">${waSvg}</div>
-      <div class="stat-body">
-        <div class="stat-label">WHATSAPP</div>
-        <div class="stat-pill ${waPillClass}">${esc(waLabel)}</div>
-      </div>
-      <div class="stat-chevron">${chevronSvg}</div>
-    </a>
-    <a class="stat-card" href="#/setup">
-      <div class="stat-icon-wrap">${aiSvg}</div>
-      <div class="stat-body">
-        <div class="stat-label">AI PROVIDER</div>
-        <div class="stat-pill ${llmPillClass}">${esc(llmLabel)}</div>
-      </div>
-      <div class="stat-chevron">${chevronSvg}</div>
-    </a>
-    <a class="stat-card" href="#/setup">
-      <div class="stat-icon-wrap">${chromeSvg}</div>
-      <div class="stat-body">
-        <div class="stat-label">BROWSER</div>
-        <div class="stat-pill ${browserPillClass}">${esc(browserLabel)}</div>
-      </div>
-      <div class="stat-chevron">${chevronSvg}</div>
-    </a>
-  `;
+async function refreshQuestionsBadge() {
+  try {
+    const res = await api('/api/questions?status=pending');
+    const list = res.questions || [];
+    const badge = $('ques-badge');
+    if (list.length > 0) {
+      badge.textContent = list.length;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch {}
 }
 
-/* ---------- chats ---------- */
-let STYLES = { presets: [], customs: [] };
-let CHATS = [];
-let PENDING_BANNER = null;
+/* ==================== CHATS MANAGEMENT ==================== */
+async function loadChats(options = {}) {
+  try {
+    await loadStyles();
+    const data = await api('/api/chats');
+    CHATS = data.chats || [];
+    renderChatList();
+  } catch (err) {
+    if (!options.silent) {
+      $('chats-container').innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">Could not load chats. Check connection.</div>';
+    }
+  }
+}
 
-function styleOptions(selected){
+function renderChatList() {
+  const container = $('chats-container');
+  const query = ($('chat-search').value || '').trim().toLowerCase();
+
+  const filtered = CHATS.filter(c => {
+    if (ACTIVE_FILTER === 'auto' && c.config?.mode !== 'auto') return false;
+    if (ACTIVE_FILTER === 'draft' && c.config?.mode !== 'draft') return false;
+    if (ACTIVE_FILTER === 'groups' && !c.isGroup) return false;
+
+    if (query) {
+      const matchName = (c.name || '').toLowerCase().includes(query);
+      const matchMsg = (c.lastMsg || '').toLowerCase().includes(query);
+      return matchName || matchMsg;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--wa-text-muted);font-size:13.5px">No chats found</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const isSelected = c.id === ACTIVE_CHAT_ID;
+    const initial = (c.name || 'C').trim().charAt(0).toUpperCase();
+    const mode = c.config?.mode || 'off';
+    const goal = (c.config?.goal || '').trim();
+    const timeStr = c.timestamp ? formatChatTime(c.timestamp) : '';
+
+    return `
+      <div class="wa-chat-item ${isSelected ? 'active' : ''}" data-chat-id="${esc(c.id)}">
+        <div class="wa-chat-avatar" style="background:${getAvatarColor(c.name)}">${esc(initial)}</div>
+        <div class="wa-chat-info">
+          <div class="wa-chat-title-row">
+            <span class="wa-chat-name">${esc(c.name)}</span>
+            <span class="wa-chat-time">${timeStr}</span>
+          </div>
+          <div class="wa-chat-snippet-row">
+            <span class="wa-chat-snippet">${esc(c.lastMsg || 'No messages yet')}</span>
+            <div class="wa-chat-badges">
+              ${c.unreadCount ? `<span class="badge-unread">${c.unreadCount}</span>` : ''}
+              ${goal ? `<span class="badge-goal" title="${esc(goal)}">🎯 Goal</span>` : ''}
+              <span class="badge-mode ${mode}">${mode}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.wa-chat-item').forEach(item => {
+    item.onclick = () => selectChat(item.dataset.chatId);
+  });
+}
+
+function formatChatTime(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function getAvatarColor(name) {
+  const colors = ['#e0f2fe', '#fef3c7', '#f3e8ff', '#dcfce7', '#ffe4e6', '#ede9fe'];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash += name.charCodeAt(i);
+  return colors[hash % colors.length];
+}
+
+/* ==================== ACTIVE CONVERSATION & AUTO-REFRESH ==================== */
+async function selectChat(chatId) {
+  ACTIVE_CHAT_ID = chatId;
+  LAST_RENDERED_MSGS_HASH = '';
+  const chat = CHATS.find(c => c.id === chatId);
+  if (!chat) return;
+
+  renderChatList();
+
+  $('empty-state').style.display = 'none';
+  const wrap = $('active-chat-wrap');
+  wrap.style.display = 'flex';
+
+  $('active-avatar').textContent = (chat.name || 'C').charAt(0).toUpperCase();
+  $('active-avatar').style.background = getAvatarColor(chat.name);
+  $('active-name').textContent = chat.name || chat.id;
+
+  const mode = chat.config?.mode || 'off';
+  const goal = (chat.config?.goal || '').trim();
+  $('active-sub').textContent = `Agent: ${mode.toUpperCase()}${goal ? ' · 🎯 ' + goal.slice(0, 32) + '…' : ''}`;
+
+  clearStagedMedia();
+  populateDrawer(chat);
+  await loadMessages(chatId);
+}
+
+async function loadMessages(chatId, options = {}) {
+  const box = $('messages-container');
+  if (!options.silent) {
+    box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--wa-text-muted);font-size:13px">Loading messages…</div>';
+  }
+
+  try {
+    const res = await api(`/api/chats/${encodeURIComponent(chatId)}/messages`);
+    const msgs = res.messages || [];
+
+    // Check if changed via hash to avoid DOM thrashing
+    const currentHash = msgs.length + '-' + (msgs[msgs.length - 1]?.id || '') + '-' + (msgs[msgs.length - 1]?.body || '');
+    if (options.silent && currentHash === LAST_RENDERED_MSGS_HASH) {
+      return;
+    }
+    LAST_RENDERED_MSGS_HASH = currentHash;
+
+    if (!msgs.length) {
+      box.innerHTML = '<div style="padding:24px;text-align:center;color:var(--wa-text-muted);font-size:13px">No conversation history available.</div>';
+      return;
+    }
+
+    // Check if user is scrolled near bottom
+    const isNearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 150;
+
+    let lastDate = '';
+    box.innerHTML = msgs.map(m => {
+      const d = m.timestamp ? new Date(m.timestamp) : new Date();
+      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      let dateDivider = '';
+      if (dateStr !== lastDate) {
+        lastDate = dateStr;
+        dateDivider = `<div class="wa-date-divider">${dateStr}</div>`;
+      }
+
+      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const isMe = Boolean(m.fromMe);
+
+      let mediaBadge = '';
+      if (m.hasMedia || m.type === 'image' || m.type === 'document' || m.type === 'video' || m.type === 'audio') {
+        const icon = m.type === 'image' ? '🖼️ Photo' : (m.type === 'document' ? '📄 Document' : (m.type === 'audio' ? '🎵 Audio' : '🎥 Media'));
+        mediaBadge = `<div class="wa-media-badge">${icon}${m.filename ? ' · ' + esc(m.filename) : ''}</div>`;
+      }
+
+      return `
+        ${dateDivider}
+        <div class="wa-msg-bubble ${isMe ? 'me' : 'them'}">
+          ${mediaBadge}
+          <div>${esc(m.body || '')}</div>
+          <div class="wa-msg-meta">
+            <span>${timeStr}</span>
+            ${isMe ? `<span class="wa-tick-blue">✓✓</span>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (isNearBottom || !options.silent) {
+      box.scrollTop = box.scrollHeight;
+    }
+  } catch (err) {
+    if (!options.silent) {
+      box.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;font-size:13px">Could not load conversation messages.</div>';
+    }
+  }
+}
+
+/* ==================== ATTACHMENTS & SENDING ==================== */
+$('btn-attach-media').onclick = () => $('media-file-input').click();
+
+$('media-file-input').onchange = () => {
+  const file = $('media-file-input').files[0];
+  if (!file) return;
+  SELECTED_MEDIA_FILE = file;
+  $('media-preview-name').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  $('media-preview-bar').style.display = 'flex';
+  $('msg-input').placeholder = 'Add a caption for this attachment (optional)…';
+  $('msg-input').focus();
+};
+
+$('media-remove-btn').onclick = clearStagedMedia;
+
+function clearStagedMedia() {
+  SELECTED_MEDIA_FILE = null;
+  $('media-file-input').value = '';
+  $('media-preview-bar').style.display = 'none';
+  $('msg-input').placeholder = 'Type a message';
+}
+
+$('btn-send-msg').onclick = sendDirectMessage;
+$('msg-input').onkeydown = e => { if (e.key === 'Enter') sendDirectMessage(); };
+
+async function sendDirectMessage() {
+  if (!ACTIVE_CHAT_ID) return;
+  const input = $('msg-input');
+  const text = input.value.trim();
+
+  // If sending media attachment
+  if (SELECTED_MEDIA_FILE) {
+    const file = SELECTED_MEDIA_FILE;
+    clearStagedMedia();
+    input.value = '';
+
+    toast('Uploading attachment to WhatsApp…');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('chatId', ACTIVE_CHAT_ID);
+    fd.append('caption', text);
+
+    try {
+      const res = await fetch('/api/send-media', { method: 'POST', body: fd }).then(r => r.json());
+      if (res.ok) {
+        toast('Attachment sent!');
+        loadMessages(ACTIVE_CHAT_ID);
+      } else {
+        toast(res.error || 'Failed to send attachment');
+      }
+    } catch {
+      toast('Upload failed');
+    }
+    return;
+  }
+
+  // Standard text message
+  if (!text) return;
+  input.value = '';
+
+  const box = $('messages-container');
+  const tempDiv = document.createElement('div');
+  tempDiv.className = 'wa-msg-bubble me';
+  tempDiv.innerHTML = `<div>${esc(text)}</div><div class="wa-msg-meta"><span>Just now</span><span class="wa-tick-gray">✓</span></div>`;
+  box.appendChild(tempDiv);
+  box.scrollTop = box.scrollHeight;
+
+  try {
+    const r = await api('/api/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId: ACTIVE_CHAT_ID, text })
+    });
+    if (r.ok) {
+      tempDiv.querySelector('.wa-tick-gray').className = 'wa-tick-blue';
+      tempDiv.querySelector('.wa-tick-blue').textContent = '✓✓';
+    } else {
+      toast(r.error || 'Failed to send message');
+    }
+  } catch (err) {
+    toast('Error sending message');
+  }
+}
+
+/* ==================== RIGHT DRAWER (AGENT SETTINGS & GOALS) ==================== */
+function populateDrawer(chat) {
+  const cfg = chat.config || {};
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === (cfg.mode || 'off'));
+  });
+
+  $('drawer-goal-text').value = cfg.goal || '';
+  $('drawer-keep-going').checked = Boolean(cfg.keepGoing);
+  $('drawer-style-select').innerHTML = styleOptions(cfg.styleId || 'preset:friendly');
+
+  const isAsap = cfg.replyAsap !== null && cfg.replyAsap !== undefined ? Boolean(cfg.replyAsap) : true;
+  $('drawer-reply-asap').checked = isAsap;
+  $('drawer-max-delay-wrap').style.display = isAsap ? 'none' : 'block';
+  $('drawer-delay-max').value = cfg.replyDelayMax || '15';
+
+  $('drawer-bluetick').value = cfg.sendBlueTick === true ? '1' : (cfg.sendBlueTick === false ? '0' : '');
+}
+
+$('drawer-reply-asap').onchange = () => {
+  $('drawer-max-delay-wrap').style.display = $('drawer-reply-asap').checked ? 'none' : 'block';
+};
+
+$('drawer-goal-preset').onchange = () => {
+  const val = $('drawer-goal-preset').value;
+  if (val) $('drawer-goal-text').value = val;
+};
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+
+$('btn-save-drawer-cfg').onclick = async () => {
+  if (!ACTIVE_CHAT_ID) return;
+  const activeModeBtn = document.querySelector('.mode-btn.active');
+  const mode = activeModeBtn ? activeModeBtn.dataset.mode : 'off';
+  const goal = $('drawer-goal-text').value.trim();
+  const keepGoing = $('drawer-keep-going').checked;
+  const styleId = $('drawer-style-select').value;
+  const replyAsap = $('drawer-reply-asap').checked;
+  const replyDelayMax = $('drawer-delay-max').value;
+  const bt = $('drawer-bluetick').value;
+  const sendBlueTick = bt === '1' ? true : (bt === '0' ? false : null);
+
+  await api('/api/chat-config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chatId: ACTIVE_CHAT_ID,
+      mode,
+      goal,
+      keepGoing,
+      styleId,
+      replyAsap,
+      replyDelayMax,
+      sendBlueTick,
+    })
+  });
+
+  toast('Agent settings & goal saved');
+  loadChats();
+};
+
+/* 1-Click Style Analyzer */
+$('btn-quick-analyze').onclick = () => runOneClickAnalyze();
+$('drawer-btn-analyze').onclick = () => runOneClickAnalyze();
+
+async function runOneClickAnalyze() {
+  if (!ACTIVE_CHAT_ID) return;
+  const statusLbl = $('drawer-analyze-status');
+  statusLbl.textContent = 'Analyzing sent messages…';
+
+  try {
+    const chat = CHATS.find(c => c.id === ACTIVE_CHAT_ID);
+    const r = await api(`/api/chats/${encodeURIComponent(ACTIVE_CHAT_ID)}/analyze-style`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: chat ? `Style: ${chat.name}` : '' })
+    });
+
+    if (r.ok) {
+      statusLbl.textContent = `✓ Learned from ${r.messageCount} messages!`;
+      toast(`Style learned and assigned!`);
+      await loadStyles();
+      $('drawer-style-select').innerHTML = styleOptions(r.style.id);
+      loadChats();
+    } else {
+      statusLbl.textContent = r.error || 'Failed to analyze style';
+      toast(r.error || 'Analysis failed');
+    }
+  } catch (err) {
+    statusLbl.textContent = 'Error analyzing chat style';
+  }
+}
+
+/* Drawer & Navigation */
+$('btn-toggle-drawer').onclick = () => $('right-drawer').classList.toggle('closed');
+$('btn-close-drawer').onclick = () => $('right-drawer').classList.add('closed');
+$('active-header-details').onclick = () => $('right-drawer').classList.remove('closed');
+$('btn-refresh-msgs').onclick = () => ACTIVE_CHAT_ID && loadMessages(ACTIVE_CHAT_ID);
+
+$('chat-search').oninput = renderChatList;
+document.querySelectorAll('.wa-chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('.wa-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    ACTIVE_FILTER = chip.dataset.filter;
+    renderChatList();
+  };
+});
+
+/* ==================== STYLES ==================== */
+function styleOptions(selected) {
   const pre = STYLES.presets.map(p =>
     `<option value="preset:${p}" ${selected === 'preset:' + p ? 'selected' : ''}>${p}</option>`).join('');
   const cus = STYLES.customs.map(s =>
     `<option value="${s.id}" ${selected === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
-  return `<optgroup label="Tones">${pre}</optgroup>` +
-    (cus ? `<optgroup label="My styles">${cus}</optgroup>` : '');
+  return `<optgroup label="Presets">${pre}</optgroup>` + (cus ? `<optgroup label="Learned Styles">${cus}</optgroup>` : '');
 }
 
-async function loadStyles(){
+async function loadStyles() {
   const r = await api('/api/styles');
   STYLES = { presets: r.presets || [], customs: r.styles || [] };
-  $('bulk-style').innerHTML = styleOptions('preset:friendly');
-  renderStyleLib();
 }
 
-function renderStyleLib(){
-  const box = $('style-lib');
-  if (!STYLES.customs.length) { box.innerHTML = '<p class="muted">None yet — teach one in Setup step 4.</p>'; return; }
-  box.innerHTML = STYLES.customs.map(s => `
-    <div class="stylelib-row">
-      <div class="nm">${esc(s.name)}</div>
-      <span class="small muted">${new Date(s.createdAt).toLocaleDateString()}</span>
-      <button class="btn ghost sm" data-del-style="${s.id}">Delete</button>
-    </div>`).join('');
-  box.querySelectorAll('[data-del-style]').forEach(b => b.onclick = async () => {
-    if (!confirm(`Delete style "${b.closest('.stylelib-row').querySelector('.nm').textContent}"?`)) return;
-    await api('/api/styles/' + encodeURIComponent(b.dataset.delStyle), { method: 'DELETE' });
-    loadChats();
-  });
+/* ==================== LOGIC BASE & TRIGGER MODES ==================== */
+$('btn-open-rules').onclick = () => openRulesModal();
+$('empty-rules-btn').onclick = () => openRulesModal();
+$('modal-rules-close').onclick = () => $('modal-rules').classList.remove('open');
+$('modal-rules-done').onclick = () => $('modal-rules').classList.remove('open');
+
+$('rule-action-input').onchange = () => {
+  const a = $('rule-action-input').value;
+  $('rule-custom-content-wrap').style.display = (a === 'fixed_reply' || a === 'custom_prompt') ? 'block' : 'none';
+  $('rule-custom-content-label').textContent = a === 'fixed_reply' ? 'Exact Canned Reply Text' : 'Custom AI Persona Prompt';
+};
+
+async function openRulesModal() {
+  $('modal-rules').classList.add('open');
+  loadRules();
 }
 
-async function loadChats(){
-  const box = $('chat-list');
+async function loadRules() {
+  const box = $('rules-list-container');
   try {
-    await loadStyles();
-    const data = await api('/api/chats');
-    if (data.error && !(data.chats || []).length) {
-      box.innerHTML = `<p class="muted">Could not load chats: ${esc(data.error)}</p>
-        <p class="hint">Try the Refresh button — WhatsApp sometimes needs a moment after pairing.</p>
-        <button class="btn ghost sm" onclick="loadChats()">Retry</button>`;
+    const res = await api('/api/rules');
+    RULES = res.rules || [];
+
+    // Quick toggles synchronization
+    const scamRule = RULES.find(r => r.id === 'rule_scammer');
+    if (scamRule) {
+      $('rule-quick-scammer-toggle').checked = Boolean(scamRule.enabled);
+      $('rule-quick-scammer-mode').value = scamRule.action || 'scambait';
+    }
+    const abuseRule = RULES.find(r => r.id === 'rule_abuse');
+    if (abuseRule) {
+      $('rule-quick-abuse-toggle').checked = Boolean(abuseRule.enabled);
+      $('rule-quick-abuse-mode').value = abuseRule.action || 'roast';
+    }
+
+    if (!RULES.length) {
+      box.innerHTML = '<div style="font-size:13px;color:var(--wa-text-muted)">No active logic rules.</div>';
       return;
     }
-    const chats = data.chats || [];
-    CHATS = chats || [];
-    populateSendPicker();
-    if (!chats.length) {
-      if (STATUS && !STATUS.waReady) {
-        box.innerHTML = '<p class="muted">WhatsApp is still connecting… Chats will load once connected.</p>';
-      } else {
-        box.innerHTML = '<p class="muted">No chats found. If you just paired WhatsApp, click Refresh in a moment.</p>';
-      }
-      return;
-    }
-    box.innerHTML = chats.map(c => {
-      const timeStr = c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
-      return `
-      <div class="chatitem" data-id="${esc(c.id)}" data-group="${c.isGroup ? 1 : 0}">
-        <div class="chathead">
-          <input type="checkbox" data-check="${esc(c.id)}">
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-              <div class="nm">${esc(c.name)}${c.isGroup ? '<span class="tag">group</span>' : ''}</div>
-              ${timeStr ? `<span class="small muted" style="flex:none;font-size:11.5px">${timeStr}</span>` : ''}
-            </div>
-            ${c.lastMsg ? `<div class="small muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;font-size:12.5px">${esc(c.lastMsg)}</div>` : ''}
+
+    box.innerHTML = RULES.map(r => `
+      <div style="background:#ffffff;border:1px solid var(--wa-border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:${r.enabled ? '#dcfce7;color:#15803d' : '#f1f5f9;color:#94a3b8'}">${r.enabled ? 'ACTIVE' : 'OFF'}</span>
+            <b style="font-size:13.5px;color:#1e293b">${esc(r.name)}</b>
+            <span style="font-size:11px;color:var(--wa-text-secondary);background:#f1f5f9;padding:2px 6px;border-radius:4px">Action: ${esc(r.action)}</span>
           </div>
-          ${c.unreadCount ? `<span class="badge on" style="font-size:11px;padding:2px 7px">${c.unreadCount}</span>` : ''}
-          <span class="badge">${esc(c.config.styleName || '')}</span>
-          <span class="badge ${c.config.mode === 'auto' ? 'on' : c.config.mode === 'draft' ? 'warn' : ''}">${c.config.mode}</span>
-        </div>
-        <div class="chatedit">
-          <div class="grid2">
-            <label class="f">Mode
-              <select id="m-${esc(c.id)}">${['off','draft','auto'].map(m =>
-                `<option value="${m}" ${c.config.mode === m ? 'selected' : ''}>${m}${m === 'auto' ? ' — replies itself' : m === 'draft' ? ' — prepares only' : ' — silent'}</option>`).join('')}</select>
-            </label>
-            <label class="f">Style
-              <select id="s-${esc(c.id)}">${styleOptions(c.config.styleId)}</select>
-            </label>
-          </div>
-          <div class="row" style="flex-wrap:wrap;gap:10px">
-            <label class="f">Delay min (s)<input type="text" id="d1-${esc(c.id)}" style="width:75px" placeholder="global" value="${c.config.replyDelayMin ?? ''}"></label>
-            <label class="f">Delay max (s)<input type="text" id="d2-${esc(c.id)}" style="width:75px" placeholder="global" value="${c.config.replyDelayMax ?? ''}"></label>
-            <label class="f">Blue tick
-              <select id="bt-${esc(c.id)}" style="width:130px">
-                <option value="" ${c.config.sendBlueTick === null || c.config.sendBlueTick === undefined ? 'selected' : ''}>Inherit global</option>
-                <option value="1" ${c.config.sendBlueTick === true ? 'selected' : ''}>Always blue</option>
-                <option value="0" ${c.config.sendBlueTick === false ? 'selected' : ''}>Ghost (gray)</option>
-              </select>
-            </label>
-            <button class="btn sm" data-save="${esc(c.id)}" style="align-self:flex-end">Save</button>
-            <button class="btn ghost sm" type="button" data-toggle-msgs="${esc(c.id)}" style="align-self:flex-end">Conversation</button>
-          </div>
-          <div id="msgs-box-${esc(c.id)}" class="msgs-box-container" style="display:none">
-            <p class="small muted" style="margin:0">Loading conversation…</p>
+          <div style="font-size:12px;color:var(--wa-text-secondary);margin-top:4px">
+            Keywords: ${(r.keywords || []).slice(0, 6).join(', ')}${r.keywords?.length > 6 ? '…' : ''}
           </div>
         </div>
-      </div>`;
-    }).join('');
-    box.querySelectorAll('.chathead').forEach(h => h.addEventListener('click', e => {
-      if (e.target.type === 'checkbox') return;
-      h.parentElement.classList.toggle('open');
-    }));
-    box.querySelectorAll('[data-save]').forEach(b => b.onclick = e => { e.stopPropagation(); saveChat(b.dataset.save); });
-    box.querySelectorAll('[data-check]').forEach(cb => cb.onchange = updateSelCount);
-    box.querySelectorAll('[data-toggle-msgs]').forEach(b => b.onclick = async e => {
-      e.stopPropagation();
-      const id = b.dataset.toggleMsgs;
-      const msgBox = document.getElementById('msgs-box-' + id);
-      if (!msgBox) return;
-      if (msgBox.style.display === 'block') {
-        msgBox.style.display = 'none';
-        b.textContent = 'Conversation';
-        return;
-      }
-      msgBox.style.display = 'block';
-      b.textContent = 'Hide conversation';
-      msgBox.innerHTML = '<p class="small muted" style="margin:0">Loading conversation…</p>';
-      try {
-        const r = await api('/api/chats/' + encodeURIComponent(id) + '/messages');
-        const msgs = r.messages || [];
-        if (!msgs.length) {
-          msgBox.innerHTML = '<p class="small muted" style="margin:0">No messages available yet.</p>';
-          return;
+        <div style="display:flex;gap:6px">
+          <button class="btn-ghost" data-toggle-rule="${esc(r.id)}" style="padding:4px 8px;font-size:12px">${r.enabled ? 'Disable' : 'Enable'}</button>
+          <button class="btn-ghost" data-del-rule="${esc(r.id)}" style="color:#ef4444;padding:4px 8px;font-size:12px">✕</button>
+        </div>
+      </div>
+    `).join('');
+
+    box.querySelectorAll('[data-toggle-rule]').forEach(b => {
+      b.onclick = async () => {
+        const rule = RULES.find(x => x.id === b.dataset.toggleRule);
+        if (rule) {
+          await api('/api/rules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...rule, enabled: !rule.enabled })
+          });
+          loadRules();
         }
-        msgBox.innerHTML = msgs.map(m => `
-          <div class="msg-bubble ${m.fromMe ? 'me' : 'them'}">
-            <div>${esc(m.body || '[Media]')}</div>
-            <div class="msg-time">${m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : ''}</div>
-          </div>`).join('');
-        msgBox.scrollTop = msgBox.scrollHeight;
-      } catch (err) {
-        msgBox.innerHTML = '<p class="small muted" style="margin:0">Could not load messages.</p>';
-      }
+      };
     });
-    if (PENDING_BANNER) {
-      const b = $('chats-banner');
-      b.style.display = 'block';
-      b.innerHTML = PENDING_BANNER;
-      $('bulk-style').value = PENDING_BANNER_STYLE || 'preset:friendly';
-      PENDING_BANNER = null;
-    }
-  } catch(e){
-    box.innerHTML = `<p class="muted">Could not load chats.</p><button class="btn ghost sm" onclick="loadChats()">Retry</button>`;
+
+    box.querySelectorAll('[data-del-rule]').forEach(b => {
+      b.onclick = async () => {
+        await api('/api/rules/' + encodeURIComponent(b.dataset.delRule), { method: 'DELETE' });
+        toast('Rule deleted');
+        loadRules();
+      };
+    });
+  } catch {
+    box.innerHTML = '<div style="font-size:13px;color:#ef4444">Failed to load rules.</div>';
   }
 }
 
-let PENDING_BANNER_STYLE = null;
-function updateSelCount(){
-  const n = document.querySelectorAll('[data-check]:checked').length;
-  $('sel-count').textContent = n + ' selected';
-}
-function selectedIds(){
-  return [...document.querySelectorAll('[data-check]:checked')].map(cb => cb.dataset.check);
-}
-document.querySelectorAll('[data-bulk]').forEach(b => b.onclick = () => {
-  const how = b.dataset.bulk;
-  document.querySelectorAll('.chatitem').forEach(it => {
-    const cb = it.querySelector('[data-check]');
-    cb.checked = how === 'all' ? true
-      : how === 'groups' ? it.dataset.group === '1'
-      : how === 'personal' ? it.dataset.group !== '1'
-      : false;
+// Quick toggles saving
+$('rule-quick-scammer-toggle').onchange = saveQuickScammerRule;
+$('rule-quick-scammer-mode').onchange = saveQuickScammerRule;
+async function saveQuickScammerRule() {
+  const existing = RULES.find(r => r.id === 'rule_scammer');
+  await api('/api/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'rule_scammer',
+      name: 'Scammer Time-Waster (Scambait)',
+      enabled: $('rule-quick-scammer-toggle').checked,
+      action: $('rule-quick-scammer-mode').value,
+      keywords: existing?.keywords || ['crypto', 'forex investment', 'guaranteed profit', 'wire money']
+    })
   });
-  updateSelCount();
+  toast('Scammer deflector updated');
+  loadRules();
+}
+
+$('rule-quick-abuse-toggle').onchange = saveQuickAbuseRule;
+$('rule-quick-abuse-mode').onchange = saveQuickAbuseRule;
+async function saveQuickAbuseRule() {
+  const existing = RULES.find(r => r.id === 'rule_abuse');
+  await api('/api/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: 'rule_abuse',
+      name: 'Abuse & Dirty Words Defense (Roast)',
+      enabled: $('rule-quick-abuse-toggle').checked,
+      action: $('rule-quick-abuse-mode').value,
+      keywords: existing?.keywords || ['fuck', 'bitch', 'idiot', 'asshole', 'bastard', 'shut up']
+    })
+  });
+  toast('Abuse mode updated');
+  loadRules();
+}
+
+$('btn-save-rule').onclick = async () => {
+  const name = $('rule-name-input').value.trim();
+  const keywords = $('rule-keywords-input').value.trim();
+  const action = $('rule-action-input').value;
+  const content = $('rule-custom-content-input').value.trim();
+
+  if (!name || !keywords) return toast('Name and keywords required');
+
+  await api('/api/rules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      keywords,
+      action,
+      fixedReplyText: action === 'fixed_reply' ? content : '',
+      customPrompt: action === 'custom_prompt' ? content : '',
+      enabled: true,
+    })
+  });
+
+  toast('Custom rule saved!');
+  $('rule-name-input').value = '';
+  $('rule-keywords-input').value = '';
+  $('rule-custom-content-input').value = '';
+  loadRules();
+};
+
+/* ==================== QUESTIONS FOLDER (REVIEW & SENSITIVE QUEUE) ==================== */
+$('btn-open-ques').onclick = () => openQuestionsModal();
+$('modal-ques-close').onclick = () => $('modal-ques').classList.remove('open');
+$('modal-ques-done').onclick = () => $('modal-ques').classList.remove('open');
+
+async function openQuestionsModal() {
+  $('modal-ques').classList.add('open');
+  loadQuestions();
+}
+
+async function loadQuestions() {
+  const box = $('ques-list-container');
+  try {
+    const res = await api('/api/questions?status=pending');
+    QUESTIONS = res.questions || [];
+    refreshQuestionsBadge();
+
+    if (!QUESTIONS.length) {
+      box.innerHTML = '<div style="font-size:13.5px;color:var(--wa-text-muted);padding:18px;text-align:center">🎉 All caught up! No pending questions or sensitive queries.</div>';
+      return;
+    }
+
+    box.innerHTML = QUESTIONS.map(q => `
+      <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div>
+            <b style="font-size:14px;color:#1e293b">${esc(q.chatName || q.sender)}</b>
+            <span style="font-size:11px;color:var(--wa-text-secondary);margin-left:6px">${new Date(q.createdAt).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</span>
+          </div>
+          <span style="font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:6px">Topic: ${esc(q.detectedTopic || 'Unverified')}</span>
+        </div>
+        <div style="background:#ffffff;border:1px solid var(--wa-border);padding:10px 12px;border-radius:8px;font-size:13.5px;color:#0f172a">
+          “${esc(q.question)}”
+        </div>
+
+        <label class="input-lbl">Your Answer / Policy Instruction
+          <textarea id="ans-text-${esc(q.id)}" rows="2" placeholder="e.g. We only give 10% discount for orders above 100 units..."></textarea>
+        </label>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#475569">Access Level:
+            <select id="ans-acc-${esc(q.id)}" style="width:auto">
+              <option value="universal">🌐 Universal (All Chats)</option>
+              <option value="chat">💬 This Chat Only</option>
+              <option value="private">🔒 Private (Confidential, never share)</option>
+            </select>
+          </label>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" data-del-q="${esc(q.id)}" style="color:#ef4444;font-size:12px">Dismiss</button>
+            <button class="btn-ghost" data-ans-q="${esc(q.id)}" data-reply="0" style="font-size:12px">Save to Memory</button>
+            <button class="btn-primary-green" data-ans-q="${esc(q.id)}" data-reply="1" style="font-size:12px;padding:6px 12px">Reply &amp; Save</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    box.querySelectorAll('[data-ans-q]').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.ansQ;
+        const sendReply = btn.dataset.reply === '1';
+        const answer = document.getElementById(`ans-text-${id}`).value.trim();
+        const accessLevel = document.getElementById(`ans-acc-${id}`).value;
+        if (!answer) return toast('Please enter your answer first');
+
+        await api(`/api/questions/${encodeURIComponent(id)}/answer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer, accessLevel, sendReply })
+        });
+        toast(sendReply ? 'Replied & Memory saved!' : 'Memory saved!');
+        loadQuestions();
+      };
+    });
+
+    box.querySelectorAll('[data-del-q]').forEach(btn => {
+      btn.onclick = async () => {
+        await api('/api/questions/' + encodeURIComponent(btn.dataset.delQ), { method: 'DELETE' });
+        toast('Question dismissed');
+        loadQuestions();
+      };
+    });
+  } catch {
+    box.innerHTML = '<div style="font-size:13px;color:#ef4444">Failed to load questions.</div>';
+  }
+}
+
+/* ==================== MEMORY FOLDER (LEARNED FACTS) ==================== */
+$('btn-open-mem').onclick = () => openMemoryModal();
+$('modal-mem-close').onclick = () => $('modal-mem').classList.remove('open');
+$('modal-mem-done').onclick = () => $('modal-mem').classList.remove('open');
+
+async function openMemoryModal() {
+  $('modal-mem').classList.add('open');
+  loadMemories();
+}
+
+async function loadMemories() {
+  const box = $('mem-list-container');
+  try {
+    const res = await api('/api/memories');
+    MEMORIES = res.memories || [];
+
+    const filtered = MEMORIES.filter(m => {
+      if (ACTIVE_MEM_FILTER === 'universal') return m.accessLevel === 'universal';
+      if (ACTIVE_MEM_FILTER === 'chat') return m.accessLevel === 'chat';
+      if (ACTIVE_MEM_FILTER === 'private') return m.accessLevel === 'private';
+      return true;
+    });
+
+    if (!filtered.length) {
+      box.innerHTML = '<div style="font-size:13px;color:var(--wa-text-muted);padding:14px 0">No memories found in this category.</div>';
+      return;
+    }
+
+    box.innerHTML = filtered.map(m => {
+      const badgeColor = m.accessLevel === 'universal' ? '#dcfce7;color:#15803d' : (m.accessLevel === 'chat' ? '#eff6ff;color:#2563eb' : '#fee2e2;color:#991b1b');
+      const badgeIcon = m.accessLevel === 'universal' ? '🌐 Universal' : (m.accessLevel === 'chat' ? '💬 Chat-Only' : '🔒 Private (Confidential)');
+
+      return `
+        <div style="background:#ffffff;border:1px solid var(--wa-border);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="min-width:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;background:${badgeColor}">${badgeIcon}</span>
+              <b style="font-size:13.5px;color:#1e293b">${esc(m.topic || 'Fact')}</b>
+              <span style="font-size:11px;color:var(--wa-text-muted)">${new Date(m.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div style="font-size:13px;color:#334155;margin-top:4px;line-height:1.45">${esc(m.fact)}</div>
+          </div>
+          <button class="btn-ghost" data-del-mem="${esc(m.id)}" style="color:#ef4444;padding:4px 8px;font-size:12px">✕</button>
+        </div>
+      `;
+    }).join('');
+
+    box.querySelectorAll('[data-del-mem]').forEach(b => {
+      b.onclick = async () => {
+        await api('/api/memories/' + encodeURIComponent(b.dataset.delMem), { method: 'DELETE' });
+        toast('Memory deleted');
+        loadMemories();
+      };
+    });
+  } catch {
+    box.innerHTML = '<div style="font-size:13px;color:#ef4444">Failed to load memories.</div>';
+  }
+}
+
+document.querySelectorAll('[data-mem-filter]').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('[data-mem-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    ACTIVE_MEM_FILTER = chip.dataset.memFilter;
+    loadMemories();
+  };
 });
-$('bulk-apply-style').onclick = async () => {
-  const ids = selectedIds();
-  if (!ids.length) return toast('Tick some chats first');
-  const styleId = $('bulk-style').value;
-  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatIds: ids, styleId }) });
-  toast(`Style applied to ${r.updated} chats`);
-  loadChats();
-};
-$('bulk-apply-mode').onclick = async () => {
-  const ids = selectedIds();
-  if (!ids.length) return toast('Tick some chats first');
-  const mode = $('bulk-mode').value;
-  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatIds: ids, mode }) });
-  toast(`Mode set on ${r.updated} chats`);
-  loadChats();
-};
-$('bulk-apply-bluetick').onclick = async () => {
-  const ids = selectedIds();
-  if (!ids.length) return toast('Tick some chats first');
-  const v = $('bulk-bluetick').value;
-  const sendBlueTick = v === '1' ? true : (v === '0' ? false : null);
-  const r = await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatIds: ids, sendBlueTick }) });
-  toast(`Blue tick updated for ${r.updated} chats`);
-  loadChats();
+
+$('btn-save-mem').onclick = async () => {
+  const topic = $('mem-topic-input').value.trim();
+  const accessLevel = $('mem-access-input').value;
+  const fact = $('mem-fact-input').value.trim();
+
+  if (!fact) return toast('Fact content is required');
+
+  await api('/api/memories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      topic: topic || 'General Fact',
+      accessLevel,
+      fact,
+      chatId: accessLevel === 'chat' ? ACTIVE_CHAT_ID : null
+    })
+  });
+
+  toast('Memory saved!');
+  $('mem-topic-input').value = '';
+  $('mem-fact-input').value = '';
+  loadMemories();
 };
 
-function esc(s){ return (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-async function saveChat(id){
-  const v = x => document.getElementById(x + '-' + id).value;
-  const bt = v('bt');
-  const sendBlueTick = bt === '1' ? true : (bt === '0' ? false : null);
-  await api('/api/chat-config', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatId: id, mode: v('m'), styleId: v('s'),
-      replyDelayMin: v('d1'), replyDelayMax: v('d2'), sendBlueTick }) });
-  toast('Saved');
-  loadChats();
+/* ==================== KNOWLEDGE BASE ==================== */
+$('btn-open-kb').onclick = () => openKnowledgeModal();
+$('empty-kb-btn').onclick = () => openKnowledgeModal();
+$('modal-kb-close').onclick = () => $('modal-kb').classList.remove('open');
+$('modal-kb-done').onclick = () => $('modal-kb').classList.remove('open');
+
+$('kb-type-select').onchange = () => {
+  $('kb-url-field').style.display = $('kb-type-select').value === 'url' ? 'block' : 'none';
+};
+
+async function openKnowledgeModal() {
+  $('modal-kb').classList.add('open');
+  loadKnowledge();
 }
-$('chats-refresh').onclick = loadChats;
 
-/* ---------- one-off outbound message ---------- */
-function populateSendPicker(){
-  const sel = $('send-chat');
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Select a chat…</option>' + CHATS.map(c =>
-    `<option value="${c.id}">${esc(c.name)}${c.isGroup ? ' (group)' : ''}</option>`).join('');
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+async function loadKnowledge() {
+  const box = $('kb-list-container');
+  try {
+    const res = await api('/api/knowledge');
+    KNOWLEDGE = res.knowledge || [];
+    if (!KNOWLEDGE.length) {
+      box.innerHTML = '<div style="font-size:13px;color:var(--wa-text-muted);padding:10px 0">No knowledge items added yet.</div>';
+      return;
+    }
+    box.innerHTML = KNOWLEDGE.map(k => `
+      <div style="background:#f8fafc;border:1px solid var(--wa-border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px;background:${k.type === 'url' ? '#eff6ff;color:#2563eb' : '#fef3c7;color:#b45309'}">${k.type.toUpperCase()}</span>
+            <span style="font-weight:600;font-size:14px;color:#1e293b">${esc(k.title)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--wa-text-secondary);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:500px">${esc(k.content || k.url)}</div>
+        </div>
+        <button class="btn-ghost" data-del-kb="${esc(k.id)}" style="color:#ef4444;padding:4px 10px;font-size:12px">Delete</button>
+      </div>
+    `).join('');
+
+    box.querySelectorAll('[data-del-kb]').forEach(b => {
+      b.onclick = async () => {
+        await api('/api/knowledge/' + encodeURIComponent(b.dataset.delKb), { method: 'DELETE' });
+        toast('Knowledge item removed');
+        loadKnowledge();
+      };
+    });
+  } catch (err) {
+    box.innerHTML = '<div style="font-size:13px;color:#ef4444">Failed to load knowledge documents.</div>';
+  }
 }
-$('send-refresh').onclick = loadChats;
-$('send-btn').onclick = async () => {
-  const chatId = $('send-chat').value, text = $('send-text').value.trim();
-  if (!chatId) return toast('Pick a chat first');
-  if (!text) return toast('Type a message first');
-  const r = await api('/api/send-message', { method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ chatId, text }) });
-  if (r.ok) { toast('Sent'); $('send-text').value = ''; }
-  else toast(r.error || 'Send failed');
+
+$('btn-save-kb').onclick = async () => {
+  const type = $('kb-type-select').value;
+  const title = $('kb-title-input').value.trim();
+  const url = $('kb-url-input').value.trim();
+  const content = $('kb-content-input').value.trim();
+
+  if (type === 'url' && !url) return toast('Please enter a website link');
+  if (type === 'text' && !content) return toast('Please enter notes or content');
+
+  toast('Saving knowledge…');
+  const r = await api('/api/knowledge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, title, url, content })
+  });
+
+  if (r.ok) {
+    toast('Knowledge saved!');
+    $('kb-title-input').value = '';
+    $('kb-url-input').value = '';
+    $('kb-content-input').value = '';
+    loadKnowledge();
+  } else {
+    toast(r.error || 'Failed to save');
+  }
 };
 
-/* ---------- setup ---------- */
+/* ==================== ONBOARDING / SETUP MODAL ==================== */
+$('btn-open-setup').onclick = () => openSetupModal();
+$('btn-user-avatar').onclick = () => openSetupModal();
+$('empty-setup-btn').onclick = () => openSetupModal();
+$('modal-setup-close').onclick = () => $('modal-setup').classList.remove('open');
+$('modal-setup-done').onclick = () => $('modal-setup').classList.remove('open');
+
+function openSetupModal() {
+  $('modal-setup').classList.add('open');
+  loadProviders();
+  loadSetupState();
+  renderSetupWA();
+}
+
+async function renderSetupWA() {
+  const box = $('setup-wa-container');
+  if (!box || !STATUS) return;
+
+  if (STATUS.waReady) {
+    const user = STATUS.waInfo?.pushname ? `${STATUS.waInfo.pushname} (${STATUS.waInfo.wid?.user || ''})` : 'Connected';
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="wa-status-dot online" style="position:static"></span>
+        <b style="color:#15803d;font-size:14px">Connected &amp; Session Saved</b>
+      </div>
+      <p style="font-size:13px;color:var(--wa-text-secondary);margin:0 0 12px">Logged in as <b>${esc(user)}</b>. Session is saved locally; you do not need to scan again.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" id="btn-wa-logout" style="font-size:12px">Log out</button>
+        <button class="btn-ghost" id="btn-wa-reset" style="font-size:12px;color:#ef4444">Reset connection</button>
+      </div>
+    `;
+    const btnOut = $('btn-wa-logout');
+    if (btnOut) btnOut.onclick = async () => {
+      await api('/api/wa-logout', { method: 'POST' });
+      toast('Logging out…');
+      refreshStatus();
+    };
+    bindResetBtn();
+    return;
+  }
+
+  if (STATUS.qrAvailable) {
+    const q = await api('/api/qr');
+    if (q.qrImage) {
+      box.innerHTML = `
+        <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+          <img src="${q.qrImage}" width="200" height="200" alt="WhatsApp QR Code" style="border-radius:10px;border:1px solid #cbd5e1;padding:8px;background:#fff">
+          <div style="flex:1;min-width:180px">
+            <p style="font-size:13px;line-height:1.5;margin:0 0 10px">Scan with WhatsApp: <b>Settings → Linked devices → Link a device</b>.</p>
+            <button class="btn-ghost" id="btn-wa-reset" style="font-size:12px;color:#ef4444">Reset QR</button>
+          </div>
+        </div>
+      `;
+      bindResetBtn();
+      return;
+    }
+  }
+
+  if (STATUS.waError) {
+    box.innerHTML = `
+      <div style="color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px;font-size:12.5px;margin-bottom:8px">
+        <b>Couldn't connect:</b> ${esc(STATUS.waError)}
+      </div>
+      <button class="btn-ghost" id="btn-wa-reset" style="font-size:12px;color:#ef4444">Reset connection</button>
+    `;
+    bindResetBtn();
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="font-size:13px;color:var(--wa-text-secondary);margin-bottom:8px">Initializing WhatsApp… this takes 10–25s on first launch.</div>
+    <button class="btn-ghost" id="btn-wa-reset" style="font-size:12px;color:#ef4444">Reset connection</button>
+  `;
+  bindResetBtn();
+}
+
+function bindResetBtn() {
+  const btn = $('btn-wa-reset');
+  if (btn) btn.onclick = async () => {
+    if (!confirm('Reset WhatsApp session? This will terminate the browser and generate a fresh QR.')) return;
+    btn.textContent = 'Resetting…';
+    await api('/api/wa-reset', { method: 'POST' });
+    toast('Connection reset. Re-initializing…');
+    refreshStatus();
+  };
+}
+
 let PROVIDERS = {};
 let LAST_SETTINGS = {};
 
-async function loadProviders(){
+async function loadProviders() {
   if (!Object.keys(PROVIDERS).length) {
     PROVIDERS = await api('/api/providers');
-    $('s-prov').innerHTML = Object.entries(PROVIDERS).map(([k,p]) => `<option value="${k}">${p.label}</option>`).join('');
-    $('s-prov').onchange = () => {
-      const k = $('s-prov').value, p = PROVIDERS[k];
-      if (p) {
-        const rememberedModel = LAST_SETTINGS.providerModels?.[k];
-        $('s-model').value = rememberedModel || p.models[0] || '';
-      }
+    $('setup-prov-select').innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `<option value="${k}">${p.label}</option>`).join('');
+    $('setup-prov-select').onchange = () => {
+      const k = $('setup-prov-select').value;
+      const p = PROVIDERS[k];
+      if (p) $('setup-model-input').value = p.models[0] || '';
       renderProviderFields();
     };
   }
   renderProviderFields();
 }
 
-function renderProviderFields(){
-  const k = $('s-prov').value, p = PROVIDERS[k];
+function renderProviderFields() {
+  const k = $('setup-prov-select').value;
+  const p = PROVIDERS[k];
   if (!p) return;
-  $('s-models').innerHTML = (p.models || []).map(m => `<option value="${m}">`).join('');
-  if (!$('s-model').value && p.models && p.models[0]) $('s-model').value = p.models[0];
-  $('s-key-wrap').style.display = p.needsKey ? '' : 'none';
-  $('s-url-wrap').style.display = (k === 'custom' || k === 'ollama' || k === 'lmstudio') ? '' : 'none';
-  if (k !== 'custom') {
-    $('s-baseurl').value = p.baseURL || '';
-    $('s-baseurl').readOnly = true;
-  } else {
-    $('s-baseurl').readOnly = false;
-  }
-  $('s-keyhint').innerHTML = (p.keyHint || '') + (p.keyUrl ? ` — <a href="${p.keyUrl}" target="_blank" rel="noopener">get a key</a>` : '');
+
+  $('setup-models-datalist').innerHTML = (p.models || []).map(m => `<option value="${m}">`).join('');
+  if (!$('setup-model-input').value && p.models && p.models[0]) $('setup-model-input').value = p.models[0];
+  $('setup-key-wrap').style.display = p.needsKey ? 'block' : 'none';
+  $('setup-url-wrap').style.display = (k === 'custom' || k === 'ollama' || k === 'lmstudio') ? 'block' : 'none';
+
+  $('setup-keyhint').innerHTML = (p.keyHint || '') + (p.keyUrl ? ` — <a href="${p.keyUrl}" target="_blank" rel="noopener" style="color:var(--wa-teal);font-weight:600">Get free key</a>` : '');
 
   const savedKey = LAST_SETTINGS.providerKeys?.[k] || (LAST_SETTINGS.llmProvider === k ? LAST_SETTINGS.llmApiKey : '');
-  if (savedKey) {
-    $('s-llm-status').textContent = `Key saved for ${p.label} (${savedKey})`;
-  } else if (!p.needsKey) {
-    $('s-llm-status').textContent = 'No key needed for ' + p.label;
-  } else {
-    $('s-llm-status').textContent = 'No key saved yet for ' + p.label;
-  }
+  $('setup-ai-status').textContent = savedKey ? `✓ Key saved for ${p.label} (${savedKey})` : (p.needsKey ? 'No key saved yet' : 'No key needed');
 }
 
-async function loadSetupState(){
+async function loadSetupState() {
   LAST_SETTINGS = await api('/api/settings');
-  if (PROVIDERS[LAST_SETTINGS.llmProvider]) $('s-prov').value = LAST_SETTINGS.llmProvider;
+  if (PROVIDERS[LAST_SETTINGS.llmProvider]) $('setup-prov-select').value = LAST_SETTINGS.llmProvider;
   renderProviderFields();
-  if (LAST_SETTINGS.llmModel) $('s-model').value = LAST_SETTINGS.llmModel;
-  if (LAST_SETTINGS.llmBaseURL) $('s-baseurl').value = LAST_SETTINGS.llmBaseURL;
-  $('s-dmin').value = LAST_SETTINGS.replyDelayMin ?? 8;
-  $('s-dmax').value = LAST_SETTINGS.replyDelayMax ?? 25;
-  if ($('s-bluetick')) $('s-bluetick').checked = Boolean(LAST_SETTINGS.sendBlueTick);
-  const curProv = $('s-prov').value;
-  const curKey = LAST_SETTINGS.providerKeys?.[curProv] || (LAST_SETTINGS.llmProvider === curProv ? LAST_SETTINGS.llmApiKey : '');
-  $('s-llm-status').textContent = curKey ? `Key saved (${curKey})` : (PROVIDERS[curProv]?.needsKey ? 'No key saved yet' : 'No key needed');
-
-  const errBox = $('s-llm-error');
-  if (errBox) {
-    if (STATUS && STATUS.lastLlmError) {
-      errBox.style.display = 'block';
-      errBox.className = 'err';
-      errBox.innerHTML = `<b>Recent AI Generation Error (${esc(STATUS.lastLlmError.provider || '')}):</b><br><code>${esc(STATUS.lastLlmError.message || '')}</code>`;
-    } else {
-      errBox.style.display = 'none';
-    }
-  }
-
-  markStep('step-llm', !!curKey || !PROVIDERS[curProv]?.needsKey);
-  markStep('step-wa', !!(STATUS && STATUS.waReady));
-}
-function markStep(id, done){ $(id).classList.toggle('done', !!done); }
-
-async function renderSetupQR(){
-  const box = $('s-qr');
-  if (!box || !$('view-setup').classList.contains('active')) return;
-  if (!STATUS) return;
-
-  function bindResetBtn() {
-    const rstBtn = $('btn-wa-reset');
-    if (rstBtn) {
-      rstBtn.onclick = async () => {
-        if (!confirm('Reset WhatsApp connection? This will terminate the browser, wipe locks/session, and generate a fresh QR code.')) return;
-        rstBtn.disabled = true;
-        rstBtn.textContent = 'Resetting…';
-        await api('/api/wa-reset', { method: 'POST' });
-        toast('Connection reset. Initializing fresh session…');
-        refreshStatus();
-      };
-    }
-  }
-
-  if (STATUS.waReady) {
-    const userPhone = STATUS.waInfo?.wid?.user ? `+${STATUS.waInfo.wid.user}` : '';
-    const userName = STATUS.waInfo?.pushname || '';
-    const who = [userName, userPhone ? `(${userPhone})` : ''].filter(Boolean).join(' ');
-    box.innerHTML = `
-      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px">
-        <span class="badge on">Connected</span>
-        <span class="badge on">Session Saved</span>
-      </div>
-      <p class="small muted" style="margin:4px 0 10px">
-        Logged in as <b>${esc(who || 'WhatsApp User')}</b>. Your session is permanently saved locally in <code>.wwebjs_auth</code>. You do <b>not</b> need to scan the QR code again when restarting the app.
-      </p>
-      <div class="row" style="gap:8px">
-        <button class="btn ghost sm" id="btn-wa-logout" style="font-size:12px">Log out / Switch account</button>
-        <button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button>
-      </div>`;
-    const btn = $('btn-wa-logout');
-    if (btn) {
-      btn.onclick = async () => {
-        if (!confirm('Log out from WhatsApp? This will clear the saved session and require scanning the QR code again.')) return;
-        btn.disabled = true;
-        btn.textContent = 'Logging out…';
-        await api('/api/wa-logout', { method: 'POST' });
-        toast('Logged out. Re-initializing…');
-        refreshStatus();
-      };
-    }
-    bindResetBtn();
-    markStep('step-wa', true);
-    return;
-  }
-  if (STATUS.qrAvailable) {
-    if (!box.dataset.qr) {
-      const q = await api('/api/qr');
-      if (q.qrImage) {
-        box.dataset.qr = '1';
-        box.innerHTML = `<div class="qrwrap"><img src="${q.qrImage}" width="240" height="240" alt="WhatsApp QR">
-          <div><p class="small">Scan with WhatsApp → Settings → Linked devices → <b>Link a device</b>.<br>The code refreshes automatically — this page polls for it.</p>
-          <div style="margin-top:12px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>
-          </div></div>`;
-        bindResetBtn();
-      }
-    }
-    return;
-  }
-  delete box.dataset.qr;
-  if (STATUS.waError) {
-    box.innerHTML = `<div class="err"><b>Couldn’t start WhatsApp:</b><br><code>${esc(STATUS.waError)}</code></div>
-      <p class="hint">Common fixes: click <b>Reset connection</b> below to wipe any corrupted locks, or wait 1–2 minutes on first run. Check terminal for full log.</p>
-      <div style="margin-top:12px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>`;
-    bindResetBtn();
-  } else {
-    box.innerHTML = `<p class="muted">Starting… this takes 10–30 seconds on first run.</p>
-      <div style="margin-top:10px"><button class="btn ghost sm" id="btn-wa-reset" style="font-size:12px;color:var(--red);border-color:#fecaca;background:var(--red-light)">Reset connection</button></div>`;
-    bindResetBtn();
-  }
+  if (LAST_SETTINGS.llmModel) $('setup-model-input').value = LAST_SETTINGS.llmModel;
+  if (LAST_SETTINGS.llmBaseURL) $('setup-url-input').value = LAST_SETTINGS.llmBaseURL;
 }
 
-$('s-save-llm').onclick = async () => {
-  const prov = $('s-prov').value;
+$('setup-save-ai').onclick = async () => {
+  const prov = $('setup-prov-select').value;
   const body = {
     llmProvider: prov,
-    llmModel: $('s-model').value.trim(),
-    llmBaseURL: $('s-baseurl').value.trim()
+    llmModel: $('setup-model-input').value.trim(),
+    llmBaseURL: $('setup-url-input').value.trim(),
   };
-  const key = $('s-key').value.trim();
+  const key = $('setup-key-input').value.trim();
   if (key) body.llmApiKey = key;
+
   const r = await api('/api/settings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
   LAST_SETTINGS = r.settings;
-  $('s-key').value = '';
-  const savedKey = LAST_SETTINGS.providerKeys?.[prov] || LAST_SETTINGS.llmApiKey;
-  $('s-llm-status').textContent = savedKey ? `Key saved (${savedKey})` : 'Saved (no key)';
-  markStep('step-llm', !!savedKey || !PROVIDERS[prov]?.needsKey);
-  toast('AI settings saved');
+  $('setup-key-input').value = '';
+  toast('AI settings saved!');
   refreshStatus();
 };
 
-$('s-clear-key').onclick = async () => {
-  const prov = $('s-prov').value;
-  const pLabel = PROVIDERS[prov]?.label || prov;
-  if (!confirm(`Remove saved API key for ${pLabel}?`)) return;
-  await api('/api/settings/clear-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider: prov })
-  });
-  $('s-key').value = '';
-  toast(`API key removed for ${pLabel}`);
-  await loadSetupState();
-  refreshStatus();
-};
-
-$('s-test-llm').onclick = async () => {
-  $('s-llm-status').textContent = 'Testing…';
+$('setup-test-ai').onclick = async () => {
+  $('setup-ai-status').textContent = 'Testing connection…';
   const body = {
-    provider: $('s-prov').value,
-    apiKey: $('s-key').value.trim(),
-    baseURL: $('s-baseurl').value.trim(),
-    model: $('s-model').value.trim()
+    provider: $('setup-prov-select').value,
+    apiKey: $('setup-key-input').value.trim(),
+    baseURL: $('setup-url-input').value.trim(),
+    model: $('setup-model-input').value.trim()
   };
   const r = await fetch('/api/llm-test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   }).then(r => r.json());
-  $('s-llm-status').innerHTML = r.ok
-    ? `<span class="badge on">works</span> <span class="muted">${esc(r.provider)} · ${esc(r.model)} replied: “${esc(r.reply)}”</span>`
-    : `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
+
+  $('setup-ai-status').innerHTML = r.ok
+    ? `<span style="color:#15803d;font-weight:700">✓ Connection Successful:</span> ${esc(r.provider)} replied “${esc(r.reply)}”`
+    : `<span style="color:#ef4444;font-weight:700">✗ Failed:</span> ${esc(r.error)}`;
 };
 
-$('s-load-models').onclick = async () => {
-  $('s-llm-status').textContent = 'Loading models…';
+$('setup-load-models').onclick = async () => {
+  $('setup-ai-status').textContent = 'Loading model list…';
   const r = await api('/api/llm-models', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      provider: $('s-prov').value,
-      apiKey: $('s-key').value.trim(),
-      baseURL: $('s-baseurl').value.trim()
+      provider: $('setup-prov-select').value,
+      apiKey: $('setup-key-input').value.trim(),
+      baseURL: $('setup-url-input').value.trim()
     })
   });
-  if (!r.ok) {
-    $('s-llm-status').innerHTML = `<span class="badge off">failed</span> <span class="muted">${esc(r.error)}</span>`;
-    return;
+  if (r.ok && r.models) {
+    $('setup-models-datalist').innerHTML = r.models.map(m => `<option value="${esc(m)}">`).join('');
+    $('setup-ai-status').textContent = `Loaded ${r.models.length} models for this provider!`;
+    toast(`Loaded ${r.models.length} models`);
+  } else {
+    $('setup-ai-status').textContent = r.error || 'Failed to load models';
   }
-  $('s-models').innerHTML = (r.models || []).map(m => `<option value="${esc(m)}">`).join('');
-  const box = $('s-model-list');
-  box.style.display = 'block';
-  const models = (r.models || []).map(m => m.replace(/^models\//, ''));
-  const cur = $('s-model').value.trim();
-  box.innerHTML = models.map(m =>
-    `<button type="button" data-model="${esc(m)}" class="${m === cur ? 'picked' : ''}">${esc(m)}</button>`).join('')
-    || '<p class="muted" style="padding:10px">No models returned.</p>';
-  box.querySelectorAll('[data-model]').forEach(b => b.onclick = () => {
-    $('s-model').value = b.dataset.model;
-    box.querySelectorAll('[data-model]').forEach(x => x.classList.remove('picked'));
-    b.classList.add('picked');
-    toast('Model selected: ' + b.dataset.model);
-  });
-  $('s-llm-status').innerHTML = `<span class="badge on">done</span> <span class="muted">${models.length} models — click one to use it.</span>`;
 };
 
-async function renderTones(){
-  try {
-    const r = await api('/api/styles');
-    const labels = r.presetLabels || {};
-    $('s-tones').innerHTML = (r.presets || []).map(k =>
-      `<span class="tone-chip">${esc(labels[k] || k)}</span>`).join('');
-  } catch(e) { /* ignore */ }
-}
-
-$('s-save-timing').onclick = async () => {
-  await api('/api/settings', {
+$('setup-clear-key').onclick = async () => {
+  const prov = $('setup-prov-select').value;
+  if (!confirm(`Remove saved API key for ${prov}?`)) return;
+  await api('/api/settings/clear-key', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      replyDelayMin: $('s-dmin').value,
-      replyDelayMax: $('s-dmax').value,
-      sendBlueTick: $('s-bluetick').checked
-    })
+    body: JSON.stringify({ provider: prov })
   });
-  toast('Timing & behavior saved');
+  $('setup-key-input').value = '';
+  toast('Key removed');
+  loadSetupState();
+  refreshStatus();
 };
 
-$('s-upload').onclick = async () => {
-  const f = $('s-file').files[0];
-  if (!f) return toast('Choose a chat export file first');
-  const fd = new FormData();
-  fd.append('file', f);
-  fd.append('name', $('s-stylename').value);
-  $('s-upload-result').textContent = 'Analyzing…';
-  const r = await fetch('/api/upload-style', { method:'POST', body: fd }).then(r => r.json());
-  if (!r.ok) {
-    $('s-upload-result').innerHTML = `<span class="badge off">failed</span> ${esc(r.error || 'unknown error')}`;
-    return;
-  }
-  $('s-upload-result').innerHTML = `<span class="badge on">done</span> Style <b>${esc(r.name)}</b> learned from <b>${r.messageCount}</b> of your messages.`;
-  $('s-file').value = ''; $('s-stylename').value = '';
-  // guided flow: take them to Chats to choose which chats use it
-  PENDING_BANNER_STYLE = r.styleId;
-  PENDING_BANNER = `<b>Style “${esc(r.name)}” is ready.</b> Tick the chats the agent should reply to, then hit <b>Apply style</b> — and set their mode to <b>auto</b>.`;
-  location.hash = '#/chats';
-};
-
-/* ---------- init ---------- */
-route();
+/* ==================== INITIALIZATION & LIVE AUTO-REFRESH ==================== */
 refreshStatus();
-setInterval(refreshStatus, 8000);
+loadChats();
+
+// 1. Live active conversation sync (every 2.5s)
+setInterval(() => {
+  if (ACTIVE_CHAT_ID) {
+    loadMessages(ACTIVE_CHAT_ID, { silent: true });
+  }
+}, 2500);
+
+// 2. Live background chats list sync (every 5s)
+setInterval(() => {
+  loadChats({ silent: true });
+}, 5000);
+
+// 3. Status and questions badge sync (every 7s)
+setInterval(() => {
+  refreshStatus();
+}, 7000);
 </script>
+
 </body>
 </html>
