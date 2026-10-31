@@ -185,7 +185,7 @@ async function anthropicChat({ apiKey, model, system, messages, meta }) {
   return cleanReplyText(text);
 }
 
-function buildSystemPrompt(chatConfig, styles) {
+function buildSystemPrompt(chatConfig, styles, knowledgeList = [], memoriesList = [], modeOverride = null, customPrompt = '') {
   // Resolve the chat's style: named custom style, preset, or fallback.
   const styleId = chatConfig.styleId || 'preset:friendly';
   let styleBlock = '';
@@ -203,9 +203,79 @@ function buildSystemPrompt(chatConfig, styles) {
     const preset = PRESETS[presetKey] || PRESETS.friendly;
     styleBlock = `STYLE: ${preset.label}.\n${preset.instructions}`;
   }
+
+  // Logic Mode Overrides (Scammer trap, Abuse roast, Custom rules)
+  let logicBlock = '';
+  if (modeOverride === 'scambait') {
+    logicBlock = `\n⚠️ SPECIAL BEHAVIOR OVERRIDE: SCAMMER TIME-WASTER (SCAMBAIT)\n` +
+      `The sender is flagged as a potential scammer, spammer, or crypto/lottery fraudster.\n` +
+      `DO NOT provide any real credentials, money, or personal data.\n` +
+      `Act like an overly friendly, technologically confused person who is naive, asks slow rambling questions, and harmlessly wastes the scammer's time.\n`;
+  } else if (modeOverride === 'roast') {
+    logicBlock = `\n⚠️ SPECIAL BEHAVIOR OVERRIDE: ABUSE & VULGARITY DEFENSE (ROAST)\n` +
+      `The sender used rude, vulgar, or abusive language.\n` +
+      `Do NOT use prohibited hate speech. Instead, reply with a razor-sharp, unbothered, witty roast or comeback that shuts them down with ice-cold confidence and sarcasm.\n`;
+  } else if (modeOverride === 'polite_decline') {
+    logicBlock = `\n⚠️ SPECIAL BEHAVIOR OVERRIDE: FIRM POLITE DECLINE\n` +
+      `Coldly, firmly, and politely decline whatever the sender is offering. Ask them not to contact you again.\n`;
+  } else if (modeOverride === 'custom_prompt' && customPrompt) {
+    logicBlock = `\n⚠️ SPECIAL BEHAVIOR OVERRIDE: CUSTOM DIRECTIVE\n${customPrompt}\n`;
+  }
+
+  let goalBlock = '';
+  if (!modeOverride && chatConfig.goal && chatConfig.goal.trim()) {
+    goalBlock = `\n🎯 CONVERSATION GOAL:\n` +
+      `Your objective in this chat is: "${chatConfig.goal.trim()}".\n` +
+      `Naturally and subtly guide the conversation toward this goal while matching the user's style. Do not sound forced, robotic, or pushy.\n`;
+    if (chatConfig.keepGoing) {
+      goalBlock += `Keep the conversation alive: ask engaging, natural open-ended follow-up questions or conversation hooks when appropriate.\n`;
+    }
+  }
+
+  let kbBlock = '';
+  if (knowledgeList && knowledgeList.length > 0) {
+    kbBlock = `\n📚 KNOWLEDGE BASE & REFERENCE FACTS:\n` +
+      `Use the following verified facts, website contents, prices, and policies to answer questions accurately:\n` +
+      knowledgeList.map(k => `--- [${k.title || 'Note'}] ---\n${(k.content || '').slice(0, 3500)}`).join('\n\n') +
+      `\nWhen the recipient asks questions relevant to the above knowledge, incorporate the accurate details while retaining your text style.\n`;
+  }
+
+  let memoryBlock = '';
+  if (memoriesList && memoriesList.length > 0) {
+    const universal = memoriesList.filter(m => m.accessLevel === 'universal');
+    const chatMem = memoriesList.filter(m => m.accessLevel === 'chat');
+    const privateMem = memoriesList.filter(m => m.accessLevel === 'private');
+
+    let memLines = [];
+    if (universal.length) {
+      memLines.push('Universal Facts:\n' + universal.map(m => `• [${m.topic}]: ${m.fact}`).join('\n'));
+    }
+    if (chatMem.length) {
+      memLines.push('Specific Facts for this contact:\n' + chatMem.map(m => `• [${m.topic}]: ${m.fact}`).join('\n'));
+    }
+    if (privateMem.length) {
+      memLines.push('🔒 CONFIDENTIAL (DO NOT DISCLOSE UNDER ANY CIRCUMSTANCE):\n' +
+        privateMem.map(m => `• [${m.topic}]: ${m.fact} (NEVER share or confirm this to sender)`).join('\n'));
+    }
+    if (memLines.length) {
+      memoryBlock = `\n🧠 LEARNED MEMORIES & DIRECTIVES:\n${memLines.join('\n\n')}\n`;
+    }
+  }
+
+  const deferralProtocol =
+    `\nPROTOCOL FOR UNVERIFIED / SENSITIVE QUERIES:\n` +
+    `If the sender is asking for specific private info (passwords, bank details, home address, or specific commitments/pricing NOT found in the Knowledge Base or Memories), DO NOT GUESS OR HALLUCINATE.\n` +
+    `Reply with a natural, polite holding message in your style (e.g. "Let me double-check that and get right back to you!"), AND append exactly "[NEED_INFO: <brief question or topic>]" at the very end of your response.\n`;
+
   return (
-    `You are a WhatsApp reply assistant. Reply as the user would reply. ` +
-    `Keep replies natural for WhatsApp: short, no headers, no bullet lists unless asked.\n${styleBlock}`
+    `You are a WhatsApp reply assistant replying on behalf of the user. Reply as the user would reply. ` +
+    `Keep replies natural for WhatsApp: short, authentic, conversational, no markdown headers, and no bullet lists unless specifically asked.\n\n` +
+    `${styleBlock}\n` +
+    `${logicBlock}` +
+    `${goalBlock}` +
+    `${kbBlock}` +
+    `${memoryBlock}` +
+    `${deferralProtocol}`
   );
 }
 
@@ -281,17 +351,41 @@ function clearLastLlmError() {
   lastLlmError = null;
 }
 
-async function generateReply(chatConfig, history, incomingText) {
-  if (!incomingText || !incomingText.trim()) return '';
+async function generateReply(chatConfig, history, incomingText, options = {}) {
+  if (!incomingText || !incomingText.trim()) return { reply: '', needInfo: null };
   const c = activeConfig();
-  const system = buildSystemPrompt(chatConfig, store.getStyles());
+  const allKnowledge = store.getKnowledge();
+  const activeKnowledge = (chatConfig.knowledgeIds && chatConfig.knowledgeIds.length > 0)
+    ? allKnowledge.filter(k => chatConfig.knowledgeIds.includes(k.id))
+    : allKnowledge;
+
+  const chatId = options.chatId || chatConfig.id || '';
+  const memories = store.getMemories(chatId);
+
+  const system = buildSystemPrompt(
+    chatConfig,
+    store.getStyles(),
+    activeKnowledge,
+    memories,
+    options.modeOverride || null,
+    options.customPrompt || ''
+  );
   const messages = [...(history || []).slice(-40), { role: 'user', text: incomingText.trim() }];
   try {
-    const text = c.meta.kind === 'anthropic'
+    let rawText = c.meta.kind === 'anthropic'
       ? await anthropicChat({ ...c, system, messages })
       : await openAIChat({ ...c, system, messages });
     lastLlmError = null;
-    return text;
+
+    // Detect if model signaled an unverified / sensitive question
+    let needInfo = null;
+    const match = rawText.match(/\[NEED_INFO:\s*(.*?)\]/i);
+    if (match) {
+      needInfo = match[1].trim();
+      rawText = rawText.replace(/\[NEED_INFO:\s*.*?\]/i, '').trim();
+    }
+
+    return { reply: rawText, needInfo };
   } catch (err) {
     lastLlmError = {
       message: err.message || 'LLM generation failed',
