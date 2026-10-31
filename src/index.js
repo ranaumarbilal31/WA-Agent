@@ -5,7 +5,7 @@ const multer = require('multer');
 const AdmZip = require('adm-zip');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 
 const config = require('./config');
 const store = require('./store');
@@ -177,13 +177,70 @@ wa.on('message', async msg => {
       await sendSeenSafe(wa, chatId);
     }
 
-    // Call LLM early to obtain the reply text and its exact length
+    // Evaluate active Logic Rules (Scammer Trap, Abuse Defense, Custom Keywords)
+    const activeRules = store.getRules().filter(r => r.enabled);
+    let matchedRule = null;
+    const textLower = (msg.body || '').toLowerCase();
+
+    for (const r of activeRules) {
+      if (r.chatScope && r.chatScope !== 'all' && Array.isArray(r.chatScope) && !r.chatScope.includes(chatId)) {
+        continue;
+      }
+      if (r.triggerType === 'keywords' && r.keywords && r.keywords.length) {
+        if (r.keywords.some(kw => textLower.includes(kw))) {
+          matchedRule = r;
+          break;
+        }
+      }
+    }
+
+    if (matchedRule) {
+      console.log(`[Rule Matched]: "${matchedRule.name}" (action: ${matchedRule.action}) for message in ${chatId}`);
+      if (matchedRule.action === 'flag_question') {
+        store.saveQuestion({
+          chatId,
+          chatName: msg._data?.notifyName || (chatId.split('@')[0]),
+          question: msg.body,
+          sender: msg.author || msg.from,
+          detectedTopic: `Rule Flagged: ${matchedRule.name}`,
+        });
+        console.log(`[Rule Action]: flagged question in Questions folder, silent without auto-reply`);
+        return;
+      }
+    }
+
+    // Call LLM with active configuration, rules, and memory context
     let reply = '';
+    let needInfo = null;
     try {
-      reply = await generateReply(cfg, history, msg.body);
+      const options = {
+        chatId,
+        modeOverride: matchedRule ? matchedRule.action : null,
+        customPrompt: matchedRule ? matchedRule.customPrompt : '',
+      };
+
+      if (matchedRule && matchedRule.action === 'fixed_reply' && matchedRule.fixedReplyText) {
+        reply = matchedRule.fixedReplyText;
+      } else {
+        const res = await generateReply(cfg, history, msg.body, options);
+        reply = res.reply;
+        needInfo = res.needInfo;
+      }
     } catch (llmErr) {
       console.error(`LLM reply generation failed for ${chatId}:`, llmErr.message);
       return;
+    }
+
+    // If model detected an unverified or sensitive question, file it in the Questions queue
+    if (needInfo) {
+      store.saveQuestion({
+        chatId,
+        chatName: msg._data?.notifyName || (chatId.split('@')[0]),
+        question: msg.body,
+        sender: msg.author || msg.from,
+        detectedTopic: needInfo,
+      });
+      console.log(`[Question Filed in Ques Folder]: "${needInfo}" from ${chatId}`);
     }
 
     if (!reply || !reply.trim()) {
@@ -192,29 +249,27 @@ wa.on('message', async msg => {
     }
 
     // Realistic human cadence:
-    // 1. Calculate typing duration based on reply length (~15 chars/sec) clamped between 3s and 20s
-    const typingDurationMs = Math.max(3000, Math.min(20000, Math.round(reply.trim().length * 65)));
+    const isAsap = cfg.replyAsap !== null && cfg.replyAsap !== undefined
+      ? Boolean(cfg.replyAsap)
+      : Boolean(s.replyAsap ?? true);
 
-    // 2. Target overall delay from settings
-    const minS = Math.max(0, Number(cfg.replyDelayMin ?? s.replyDelayMin));
-    const maxS = Math.max(minS, Number(cfg.replyDelayMax ?? s.replyDelayMax));
-    const targetDelayMs = (minS + Math.random() * (maxS - minS)) * 1000;
-
-    // Total delay must at least accommodate the typing duration
-    const totalDelayMs = Math.max(targetDelayMs, typingDurationMs);
-
-    // 3. Thinking / Reading pause: the silence BEFORE typing starts
-    const thinkingPauseMs = Math.max(400, totalDelayMs - typingDurationMs);
-
-    console.log(`Cadence for ${chatId}: thinking ${(thinkingPauseMs / 1000).toFixed(1)}s -> typing ${(typingDurationMs / 1000).toFixed(1)}s -> send (${reply.trim().length} chars)`);
-
-    // Phase 1: Reading / Thinking silence
-    if (thinkingPauseMs > 0) {
-      await new Promise(r => setTimeout(r, thinkingPauseMs));
+    if (isAsap) {
+      // ASAP mode: Reply is generated; pulse typing for a brief natural duration (2.0s - 4.5s) then send
+      const typingDurationMs = Math.max(2000, Math.min(4500, Math.round(reply.trim().length * 30)));
+      console.log(`Cadence [ASAP] for ${chatId}: pulsing typing ${(typingDurationMs / 1000).toFixed(1)}s -> send (${reply.trim().length} chars)`);
+      await pulseTyping(wa, chatId, typingDurationMs);
+    } else {
+      // Deliberate delay mode: target delay up to replyDelayMax
+      const maxS = Math.max(4, Number(cfg.replyDelayMax ?? s.replyDelayMax ?? 15));
+      const targetDelayMs = (3 + Math.random() * (maxS - 3)) * 1000;
+      const typingDurationMs = Math.max(2500, Math.min(15000, Math.round(reply.trim().length * 50)));
+      const thinkingPauseMs = Math.max(300, targetDelayMs - typingDurationMs);
+      console.log(`Cadence [DELAY] for ${chatId}: thinking ${(thinkingPauseMs / 1000).toFixed(1)}s -> typing ${(typingDurationMs / 1000).toFixed(1)}s -> send (${reply.trim().length} chars)`);
+      if (thinkingPauseMs > 0) {
+        await new Promise(r => setTimeout(r, thinkingPauseMs));
+      }
+      await pulseTyping(wa, chatId, typingDurationMs);
     }
-
-    // Phase 2: Active continuous typing pulse right up until message send
-    await pulseTyping(wa, chatId, typingDurationMs);
 
     // Phase 3: Instant dispatch at the conclusion of typing
     store.pushHistory(chatId, 'model', reply);
@@ -510,9 +565,9 @@ async function getMessagesSafe(client, chatId, limit = 40) {
         return list.map(m => {
           const authorId = m.author ? (m.author._serialized || m.author) : '';
           const fromId = m.from ? (m.from._serialized || m.from) : '';
-          let body = m.body || '';
+          let body = m.body || m.caption || '';
           if (!body && (m.type === 'image' || m.type === 'video' || m.type === 'document' || m.type === 'audio' || m.type === 'sticker' || m.type === 'ptt')) {
-            body = `[${(m.type || 'media').toUpperCase()}]`;
+            body = m.filename ? `[${(m.type || 'file').toUpperCase()}: ${m.filename}]` : `[${(m.type || 'media').toUpperCase()}]`;
           }
           return {
             id: m.id?._serialized || String(m.id || Math.random()),
@@ -520,6 +575,10 @@ async function getMessagesSafe(client, chatId, limit = 40) {
             body: body,
             timestamp: m.t ? m.t * 1000 : (m.timestamp ? m.timestamp * 1000 : Date.now()),
             author: authorId || fromId,
+            type: m.type || 'chat',
+            hasMedia: Boolean(m.hasMedia || m.type === 'image' || m.type === 'document' || m.type === 'video'),
+            caption: m.caption || '',
+            filename: m.filename || '',
           };
         });
       } catch (err) {
@@ -577,16 +636,140 @@ app.get('/api/chats/:chatId/messages', async (req, res) => {
   return res.json({ messages: h });
 });
 
+// Analyze this chat in 1 click directly from sent messages in WhatsApp
+app.post('/api/chats/:chatId/analyze-style', async (req, res) => {
+  const chatId = req.params.chatId;
+  const { name } = req.body || {};
+  try {
+    const msgs = await getMessagesSafe(wa, chatId, 100);
+    if (!msgs || !msgs.length) {
+      return res.status(400).json({ error: 'No recent messages found in this chat to analyze.' });
+    }
+    const myMsgs = msgs.filter(m => m.fromMe && m.body && m.body.trim().length > 0);
+    if (myMsgs.length < 2) {
+      return res.status(400).json({
+        error: `Only found ${myMsgs.length} message(s) from you in this chat. Send a few more messages or export chat to train.`
+      });
+    }
+
+    const formatted = msgs
+      .filter(m => m.body && m.body.trim())
+      .map(m => ({
+        sender: m.fromMe ? 'me' : (m.author || 'contact'),
+        text: m.body.trim(),
+        date: m.timestamp ? new Date(m.timestamp) : new Date(),
+      }));
+
+    const profile = analyze(formatted, ['me']);
+    if (!profile.messageCount) {
+      return res.status(400).json({ error: 'Could not extract style traits from messages.' });
+    }
+
+    const fallbackName = (chatId.split('@')[0] || 'Chat').replace(/[^\w\s-]/g, '');
+    const styleName = (name || `Style: ${fallbackName}`).slice(0, 50);
+    const saved = store.saveStyle(styleName, profile);
+    store.setChatConfig(chatId, { styleId: saved.id });
+
+    res.json({
+      ok: true,
+      style: saved,
+      messageCount: profile.messageCount,
+      avgLength: profile.avgLength,
+      emojiRate: profile.emojiRate,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to analyze chat style' });
+  }
+});
+
+// HTML sanitizer for website link knowledge base extraction
+function stripHtml(html) {
+  return (html || '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, ' ')
+    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, ' ')
+    .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, ' ')
+    .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Knowledge Base API
+app.get('/api/knowledge', (req, res) => {
+  res.json({ knowledge: store.getKnowledge() });
+});
+
+app.post('/api/knowledge', async (req, res) => {
+  try {
+    const { id, title, type, url, content } = req.body || {};
+    let finalContent = (content || '').trim();
+
+    if (type === 'url' && url) {
+      let fetchUrl = url.trim();
+      if (!/^https?:\/\//i.test(fetchUrl)) fetchUrl = 'https://' + fetchUrl;
+      try {
+        const resp = await fetch(fetchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+          signal: AbortSignal.timeout(12000),
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const html = await resp.text();
+        const extracted = stripHtml(html);
+        if (extracted && extracted.length > 20) {
+          finalContent = extracted.slice(0, 15000); // up to 15,000 chars of clean readable text
+        }
+      } catch (fetchErr) {
+        if (!finalContent) {
+          finalContent = `[URL: ${fetchUrl}] (Could not automatically scrape content: ${fetchErr.message})`;
+        }
+      }
+    }
+
+    if (!finalContent && !url) {
+      return res.status(400).json({ error: 'Please enter a website link or policy/pricing content.' });
+    }
+
+    const item = store.saveKnowledge({
+      id,
+      title: title || (type === 'url' ? url : 'Knowledge Note'),
+      type: type === 'url' ? 'url' : 'text',
+      url: url || '',
+      content: finalContent,
+    });
+
+    res.json({ ok: true, item });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/knowledge/:id', (req, res) => {
+  const ok = store.deleteKnowledge(req.params.id);
+  res.json({ ok });
+});
+
 app.post('/api/chat-config', (req, res) => {
-  const { chatId, chatIds, mode, styleId, replyDelayMin, replyDelayMax, sendBlueTick } = req.body;
+  const { chatId, chatIds, mode, styleId, replyDelayMax, replyAsap, sendBlueTick, goal, keepGoing, knowledgeIds } = req.body;
   const ids = chatIds && chatIds.length ? chatIds : (chatId ? [chatId] : []);
   if (!ids.length) return res.status(400).json({ error: 'chatId(s) required' });
   const patch = {};
   if (mode !== undefined) patch.mode = mode;
   if (styleId !== undefined) patch.styleId = styleId;
-  if (replyDelayMin !== undefined) patch.replyDelayMin = replyDelayMin === '' || replyDelayMin === null ? null : Number(replyDelayMin);
   if (replyDelayMax !== undefined) patch.replyDelayMax = replyDelayMax === '' || replyDelayMax === null ? null : Number(replyDelayMax);
+  if (replyAsap !== undefined) patch.replyAsap = replyAsap === '' || replyAsap === null ? null : Boolean(replyAsap);
   if (sendBlueTick !== undefined) patch.sendBlueTick = sendBlueTick === '' || sendBlueTick === null ? null : Boolean(sendBlueTick);
+  if (goal !== undefined) patch.goal = String(goal || '').trim();
+  if (keepGoing !== undefined) patch.keepGoing = Boolean(keepGoing);
+  if (knowledgeIds !== undefined) patch.knowledgeIds = Array.isArray(knowledgeIds) ? knowledgeIds : [];
   store.setChatConfigBulk(ids, patch);
   res.json({ ok: true, updated: ids.length });
 });
@@ -629,6 +812,120 @@ app.post('/api/send-message', async (req, res) => {
   }
 });
 
+// Outbound media attachment message (images, documents, audio, videos)
+app.post('/api/send-media', upload.single('file'), async (req, res) => {
+  try {
+    if (!waReady) return res.status(400).json({ error: 'WhatsApp is not connected yet.' });
+    if (!req.file) return res.status(400).json({ error: 'No media file provided.' });
+    const chatId = req.body.chatId;
+    if (!chatId) return res.status(400).json({ error: 'chatId required.' });
+    const caption = (req.body.caption || '').trim();
+
+    const base64 = req.file.buffer.toString('base64');
+    const media = new MessageMedia(req.file.mimetype, base64, req.file.originalname);
+
+    await wa.sendMessage(chatId, media, { caption: caption || undefined });
+
+    const historyEntry = caption
+      ? `[File: ${req.file.originalname}] ${caption}`
+      : `[File: ${req.file.originalname}]`;
+    store.pushHistory(chatId, 'model', historyEntry);
+
+    res.json({ ok: true, filename: req.file.originalname });
+  } catch (err) {
+    console.error('send-media error:', err);
+    res.status(500).json({ error: err.message || 'Failed to send attachment' });
+  }
+});
+
+// ---------- Logic Base / Trigger Rules API ----------
+app.get('/api/rules', (req, res) => {
+  res.json({ rules: store.getRules() });
+});
+
+app.post('/api/rules', (req, res) => {
+  try {
+    const rule = store.saveRule(req.body);
+    res.json({ ok: true, rule });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/rules/:id', (req, res) => {
+  res.json({ ok: store.deleteRule(req.params.id) });
+});
+
+// ---------- Questions Queue API (Unanswered / Sensitive) ----------
+app.get('/api/questions', (req, res) => {
+  res.json({ questions: store.getQuestions(req.query.status) });
+});
+
+app.post('/api/questions', (req, res) => {
+  try {
+    const { chatId, chatName, topic, questionText, triggerMessage } = req.body || {};
+    if (!questionText && !topic) {
+      return res.status(400).json({ error: 'questionText or topic is required.' });
+    }
+    const q = store.saveQuestion({
+      chatId,
+      chatName,
+      topic: topic || 'User Flagged Question',
+      questionText: questionText || topic,
+      triggerMessage: triggerMessage || questionText,
+    });
+    res.json({ ok: true, question: q });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/questions/:id/answer', async (req, res) => {
+  try {
+    const { answer, accessLevel, topic, sendReply } = req.body || {};
+    if (!answer || !answer.trim()) return res.status(400).json({ error: 'Answer is required.' });
+
+    const result = store.resolveQuestion(req.params.id, {
+      answer: answer.trim(),
+      accessLevel: accessLevel || 'universal',
+      topic: topic || 'Learned Fact',
+      makeMemory: true,
+    });
+    if (!result) return res.status(404).json({ error: 'Question not found.' });
+
+    if (sendReply && result.question.chatId && waReady) {
+      await wa.sendMessage(result.question.chatId, answer.trim());
+      store.pushHistory(result.question.chatId, 'model', answer.trim());
+    }
+
+    res.json({ ok: true, question: result.question, memory: result.memory });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/questions/:id', (req, res) => {
+  res.json({ ok: store.deleteQuestion(req.params.id) });
+});
+
+// ---------- Memory Folder API ----------
+app.get('/api/memories', (req, res) => {
+  res.json({ memories: store.getMemories(req.query.chatId) });
+});
+
+app.post('/api/memories', (req, res) => {
+  try {
+    const mem = store.saveMemory(req.body);
+    res.json({ ok: true, memory: mem });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/memories/:id', (req, res) => {
+  res.json({ ok: store.deleteMemory(req.params.id) });
+});
+
 // ---------- Settings: BYOK (any LLM) + reply delay range ----------
 function maskKey(k) { return k ? '••••••' + k.slice(-4) : ''; }
 
@@ -646,14 +943,14 @@ app.get('/api/settings', (req, res) => {
 });
 
 app.post('/api/settings', (req, res) => {
-  const { llmProvider, llmApiKey, llmBaseURL, llmModel, replyDelayMin, replyDelayMax, sendBlueTick } = req.body;
+  const { llmProvider, llmApiKey, llmBaseURL, llmModel, replyDelayMax, replyAsap, sendBlueTick } = req.body;
   const patch = {};
   if (llmProvider !== undefined && PROVIDERS[llmProvider]) patch.llmProvider = llmProvider;
   if (llmApiKey !== undefined) patch.llmApiKey = llmApiKey.trim(); // empty clears it
   if (llmBaseURL !== undefined) patch.llmBaseURL = llmBaseURL.trim();
   if (llmModel !== undefined) patch.llmModel = llmModel.trim();
-  if (replyDelayMin !== undefined) patch.replyDelayMin = Math.max(0, Number(replyDelayMin) || 0);
-  if (replyDelayMax !== undefined) patch.replyDelayMax = Math.max(patch.replyDelayMin ?? store.getSettings().replyDelayMin, Number(replyDelayMax) || 0);
+  if (replyDelayMax !== undefined) patch.replyDelayMax = Math.max(3, Number(replyDelayMax) || 15);
+  if (replyAsap !== undefined) patch.replyAsap = Boolean(replyAsap);
   if (sendBlueTick !== undefined) patch.sendBlueTick = Boolean(sendBlueTick);
   const saved = store.setSettings(patch);
   res.json({ ok: true, settings: { ...saved, llmApiKey: maskKey(saved.llmApiKey) } });
